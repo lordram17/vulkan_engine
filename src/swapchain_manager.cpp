@@ -144,7 +144,7 @@ void SwapchainManager::CreateSwapchain(VkDevice logical_device, VkPhysicalDevice
 
     // The logic being used below is that if the graphics queue and the present queue are different, then we need to allow
     // them to share the images (this is just for ease of use right now)
-    // If the graphics and present queue are not the same then we can use the exclusive mode since only one queue family will
+    // If the graphics and present queue are the same then we can use the exclusive mode since only one queue family will
     // be using the images
     if(queue_families.graphicsFamily != queue_families.presentFamily)
     {
@@ -197,6 +197,7 @@ void SwapchainManager::RetrieveSwapchainImages(VkDevice logical_device)
     vkGetSwapchainImagesKHR(logical_device, Swapchain_, &image_count, SwapchainImages_.data());
 }
 
+//this function is not yet called anywhere
 void SwapchainManager::CreateImageViews(VkDevice logical_device)
 {
     SwapchainImageViews_.resize(SwapchainImages_.size());

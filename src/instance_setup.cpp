@@ -29,7 +29,7 @@ VkInstance IVRInstanceCreator::CreateVulkanInstance()
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_0;
 
-    VkInstanceCreateInfo createInfo;
+    VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
 
@@ -47,7 +47,7 @@ VkInstance IVRInstanceCreator::CreateVulkanInstance()
     if(EnableValidationLayers_)
     {
         createInfo.enabledLayerCount = static_cast<uint32_t>(ValidationLayers_.size());
-        createInfo.ppEnabledLayerNames = ValidationLayers;
+        createInfo.ppEnabledLayerNames = ValidationLayers_.data();
     }
     else 
     {

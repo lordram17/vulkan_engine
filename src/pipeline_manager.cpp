@@ -126,7 +126,7 @@ void PipelineManager::CreateGraphicsPipeline()
     //Multisampling
     //One of the ways to perform anti-aliasing. Works by combining fragment shader results of multiple polygons that rasterize to the same pixel
     //Enabling requires a GPU feature
-    VkPipelineMultisampleStateCreateInfo multisampling;
+    VkPipelineMultisampleStateCreateInfo multisampling{};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_FALSE;
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -159,7 +159,7 @@ void PipelineManager::CreateGraphicsPipeline()
     // check https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Fixed_functions#page_Color-blending 
     //      for explanation on how color blending works
 
-    VkPipelineColorBlendStateCreateInfo colorBlending;
+    VkPipelineColorBlendStateCreateInfo colorBlending{};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE; //enables second method of blending (bitwise combination)
     colorBlending.logicOp = VK_LOGIC_OP_COPY; //the bitwise operation can be specified here (this will disable the first metho, as if blendEnable = VK_FALSE for all framebuffers)
