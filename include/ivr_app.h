@@ -13,6 +13,7 @@
 #include "device_setup.h"
 #include "swapchain_manager.h"
 #include "pipeline_manager.h"
+#include "command_buffer_manager.h"
 
 #define NDEBUG
 
@@ -43,8 +44,18 @@ private:
     VkQueue GraphicsQueue_; //queues are automatically created along with the logical device. Also they are implicitly cleaned when the device is destroyed.
     VkQueue PresentQueue_;
 
+    VkCommandBuffer CommandBuffer_;
+    VkRenderPass RenderPass_;
+    VkPipeline GraphicsPipeline_;
+
     VkSurfaceKHR Surface_; //rendered images are presented to the vk surface. created by GLFW, thus connected to the glfw window using Window System Integration extensions (like VK_KHR_surface)
-    std::shared_ptr<SwapchainManager> SwapchainManager_;
+    
+    std::shared_ptr<IVRSwapchainManager> SwapchainManager_;
+    IVRCBManager CommandBufferManager_{};
+
+    VkSemaphore ImageAvailableSemaphore_;
+    VkSemaphore RenderFinishedSemaphore_;
+    VkFence InFlightFence_;
 
     void initWindow() ;
 
@@ -59,5 +70,9 @@ private:
     void createLogicalDevice();
 
     void createSurface();
+
+    void DrawFrame();
+
+    void CreateSyncObjects();
 
 };

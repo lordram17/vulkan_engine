@@ -1,6 +1,6 @@
 #include "pipeline_manager.h"
 
-void PipelineManager::CreateGraphicsPipeline()
+VkPipeline IVRPipelineManager::CreateGraphicsPipeline()
 {
     std::vector<char> vert_shader_code = SimpleFileReader::ReadFile("../shaders/vert.spv");
     std::vector<char> frag_shader_code = SimpleFileReader::ReadFile("../shaders/frag.spv");
@@ -215,7 +215,7 @@ void PipelineManager::CreateGraphicsPipeline()
     pipelineInfo.pDepthStencilState = nullptr;
     pipelineInfo.pTessellationState = nullptr;
     pipelineInfo.pColorBlendState =&colorBlending;
-    pipelineInfo.pDynamicState = nullptr;
+    pipelineInfo.pDynamicState = &dynamicState;
 
     //pipeline layout
     pipelineInfo.layout = PipelineLayout_;
@@ -237,9 +237,11 @@ void PipelineManager::CreateGraphicsPipeline()
 
     vkDestroyShaderModule(LogicalDevice_, vert_shader_module, nullptr);
     vkDestroyShaderModule(LogicalDevice_, frag_shader_module, nullptr);
+
+    return Pipeline_;
 }
 
-void PipelineManager::CreateRenderPass()
+void IVRPipelineManager::CreateRenderPass()
 {
     //Before creating the pipeline, we need to tell Vulkan about the framebuffer attachments that will be used for rendering
     //Need to specify:
@@ -294,38 +296,64 @@ void PipelineManager::CreateRenderPass()
         4. pPreserveAttachments : attachments not used by this subpass but for which data must be preserved
     */
 
-    //Finally, create the render pass
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment; //attachment description array
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
+    VkSubpassDependency dependency{};
+    //the following two fields specify the indices of the dependency and the dependent subpass
+    //VK_SUBPASS_EXTERNAL refers to the implicit subpass before or after the render pass depending on whether it is specified in the srcSubpass or dstSubpass
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL; 
+    dependency.dstSubpass = 0; //index 0 refers to our subpass which is the first and the only one
+    //the dstSubpass must be higher than the srcSubpass to prevent cycles in the dependency graph
 
-    if(vkCreateRenderPass(LogicalDevice_, &renderPassInfo, nullptr, &RenderPass_) != VK_SUCCESS)
+    //specify the operations to wait on and the stages in which these operations occur
+    //we need to wait for the swapchain to finish reading from the image before we can access it
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+
+    //the operations that should wait on this are in the color attachment stage and involve the writing of the color attachment
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    //renderpassinfo.dependencyCount = 1;
+    //renderpassinfo.pDependencies = &dependency;
+
+    //Finally, create the render pass
+    VkRenderPassCreateInfo render_pass_info{};
+    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_info.attachmentCount = 1;
+    render_pass_info.pAttachments = &colorAttachment; //attachment description array
+    render_pass_info.subpassCount = 1;
+    render_pass_info.pSubpasses = &subpass;
+    render_pass_info.dependencyCount = 1;
+    render_pass_info.pDependencies = &dependency;
+
+    if(vkCreateRenderPass(LogicalDevice_, &render_pass_info, nullptr, &RenderPass_) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create render pass!");
     }
 
 }
 
-void PipelineManager::DestroyPipelineLayout()
+VkRenderPass IVRPipelineManager::GetRenderPass()
+{
+    return RenderPass_;
+}
+
+void IVRPipelineManager::DestroyPipelineLayout()
 {
     vkDestroyPipelineLayout(LogicalDevice_, PipelineLayout_, nullptr);
 }
 
-void PipelineManager::DestroyRenderPass()
+void IVRPipelineManager::DestroyRenderPass()
 {
     vkDestroyRenderPass(LogicalDevice_, RenderPass_, nullptr);
 }
 
-void PipelineManager::DestroyPipeline()
+void IVRPipelineManager::DestroyPipeline()
 {
     vkDestroyPipeline(LogicalDevice_, Pipeline_, nullptr);
     DestroyPipelineLayout();
 }
 
-VkShaderModule PipelineManager::CreateShaderModule(const std::vector<char> &bytecode)
+VkShaderModule IVRPipelineManager::CreateShaderModule(const std::vector<char> &bytecode)
 {
     VkShaderModuleCreateInfo createInfo{};
 

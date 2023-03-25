@@ -1,23 +1,6 @@
 #include "device_setup.h"
 
-bool IVRDeviceCreator::IsDeviceSuitable_(VkPhysicalDevice device, VkSurfaceKHR surface)
-{
-    VkPhysicalDeviceProperties deviceProperties; //basic device properties like name, type and supported vulkan version
-    vkGetPhysicalDeviceProperties(device, &deviceProperties);
-
-    VkPhysicalDeviceFeatures deviceFeatures; //support for optional features like texture compression, 64 bit float, multi viewport rendering
-    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-
-    // can add logic to check if device is suitable or choose from multiple devices based on a score alloted depending on their capabilities
-
-    bool extensions_supported = CheckDeviceExtensionSupport_(device);
-
-    QueueFamilyIndices indices = FindQueueFamilies_(device, surface);
-
-    return indices.isComplete() && extensions_supported;
-}
-
-QueueFamilyIndices IVRDeviceCreator::FindQueueFamilies_(VkPhysicalDevice device, VkSurfaceKHR surface)
+QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
     QueueFamilyIndices indices;
 
@@ -55,6 +38,23 @@ QueueFamilyIndices IVRDeviceCreator::FindQueueFamilies_(VkPhysicalDevice device,
 
     //logic to find graphics queue family
     return indices;
+}
+
+bool IVRDeviceCreator::IsDeviceSuitable_(VkPhysicalDevice device, VkSurfaceKHR surface)
+{
+    VkPhysicalDeviceProperties deviceProperties; //basic device properties like name, type and supported vulkan version
+    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+    VkPhysicalDeviceFeatures deviceFeatures; //support for optional features like texture compression, 64 bit float, multi viewport rendering
+    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+    // can add logic to check if device is suitable or choose from multiple devices based on a score alloted depending on their capabilities
+
+    bool extensions_supported = CheckDeviceExtensionSupport_(device);
+
+    QueueFamilyIndices indices = FindQueueFamilies(device, surface);
+
+    return indices.isComplete() && extensions_supported;
 }
 
 bool IVRDeviceCreator::CheckDeviceExtensionSupport_(VkPhysicalDevice physical_device)
@@ -115,7 +115,7 @@ VkPhysicalDevice IVRDeviceCreator::PickPhysicalDevice(VkSurfaceKHR surface, VkIn
         throw std::runtime_error("Found GPU/s but none of them are suitable");
     }
 
-    PickedPhysicalDeviceQueueFamilyIndices_ = FindQueueFamilies_(PhysicalDevice_, surface);
+    PickedPhysicalDeviceQueueFamilyIndices_ = FindQueueFamilies(PhysicalDevice_, surface);
 
     return PhysicalDevice_;
 }

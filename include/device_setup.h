@@ -18,6 +18,8 @@ struct QueueFamilyIndices
     }
 };
 
+QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
+
 /**
  * @brief respoinsible for creating the logical and physical devices
  * 
@@ -39,7 +41,7 @@ private:
     QueueFamilyIndices PickedPhysicalDeviceQueueFamilyIndices_;
 
     bool IsDeviceSuitable_(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
-    QueueFamilyIndices FindQueueFamilies_(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
+    
     bool CheckDeviceExtensionSupport_(VkPhysicalDevice physical_device);
 
 public:

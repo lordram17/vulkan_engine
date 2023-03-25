@@ -1,6 +1,6 @@
 #include "swapchain_manager.h"
 
-SwapchainSupportDetails SwapchainManager::QuerySwapchainSupport_(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+SwapchainSupportDetails IVRSwapchainManager::QuerySwapchainSupport_(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
 {
     SwapchainSupportDetails support_details;
 
@@ -29,7 +29,7 @@ SwapchainSupportDetails SwapchainManager::QuerySwapchainSupport_(VkPhysicalDevic
 }
 
 
-bool SwapchainManager::IsSwapchainAdequate(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+bool IVRSwapchainManager::IsSwapchainAdequate(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
 {
     SwapchainSupportDetails swapchain_support_details = QuerySwapchainSupport_(physical_device, surface);
     bool swapchain_adequate = !swapchain_support_details.formats.empty() && !swapchain_support_details.presentModes.empty();
@@ -37,7 +37,7 @@ bool SwapchainManager::IsSwapchainAdequate(VkPhysicalDevice physical_device, VkS
     return swapchain_adequate;
 }
 
-VkSurfaceFormatKHR SwapchainManager::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats)
+VkSurfaceFormatKHR IVRSwapchainManager::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats)
 {
     //VkSurfaceFormatKHR contains a format and colorSpace member
     // format specifies color channels and type
@@ -54,7 +54,7 @@ VkSurfaceFormatKHR SwapchainManager::ChooseSwapSurfaceFormat(const std::vector<V
     return available_formats[0];
 }
 
-VkPresentModeKHR SwapchainManager::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> &available_present_modes)
+VkPresentModeKHR IVRSwapchainManager::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> &available_present_modes)
 {
     /**
      *  the different present modes:
@@ -86,7 +86,7 @@ VkPresentModeKHR SwapchainManager::ChooseSwapPresentMode(const std::vector<VkPre
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D SwapchainManager::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities)
+VkExtent2D IVRSwapchainManager::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities)
 {
     /** 
      * Swap extent is the resolution of the swap chain images and it is almost always exactly equal to the resolution of the window
@@ -105,7 +105,7 @@ VkExtent2D SwapchainManager::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR &ca
     return capabilities.currentExtent;
 }
 
-void SwapchainManager::CreateSwapchain(VkDevice logical_device, VkPhysicalDevice physical_device, 
+void IVRSwapchainManager::CreateSwapchain(VkDevice logical_device, VkPhysicalDevice physical_device, 
     VkSurfaceKHR surface, QueueFamilyIndices queue_families)
 {
     SwapchainSupportDetails support_details = QuerySwapchainSupport_(physical_device, surface);
@@ -182,14 +182,15 @@ void SwapchainManager::CreateSwapchain(VkDevice logical_device, VkPhysicalDevice
         throw std::runtime_error("Familed to create swapchain");
     }
 
+    RetrieveSwapchainImages(logical_device);
 }
 
-void SwapchainManager::DestroySwapchain(VkDevice logical_device)
+void IVRSwapchainManager::DestroySwapchain(VkDevice logical_device)
 {
     vkDestroySwapchainKHR(logical_device, Swapchain_, nullptr);
 }
 
-void SwapchainManager::RetrieveSwapchainImages(VkDevice logical_device)
+void IVRSwapchainManager::RetrieveSwapchainImages(VkDevice logical_device)
 {
     uint32_t image_count;
     vkGetSwapchainImagesKHR(logical_device, Swapchain_, &image_count, nullptr);
@@ -198,7 +199,7 @@ void SwapchainManager::RetrieveSwapchainImages(VkDevice logical_device)
 }
 
 //this function is not yet called anywhere
-void SwapchainManager::CreateImageViews(VkDevice logical_device)
+void IVRSwapchainManager::CreateImageViews(VkDevice logical_device)
 {
     SwapchainImageViews_.resize(SwapchainImages_.size());
 
@@ -233,7 +234,7 @@ void SwapchainManager::CreateImageViews(VkDevice logical_device)
     }
 }
 
-void SwapchainManager::DestroyImageViews(VkDevice logical_device)
+void IVRSwapchainManager::DestroyImageViews(VkDevice logical_device)
 {
     for(VkImageView& image_view : SwapchainImageViews_)
     {
@@ -241,12 +242,58 @@ void SwapchainManager::DestroyImageViews(VkDevice logical_device)
     }
 }
 
-VkFormat SwapchainManager::GetSwapchainImageFormat()
+VkFormat IVRSwapchainManager::GetSwapchainImageFormat()
 {
     return SwapchainImageFormat_;
 }
 
-VkExtent2D SwapchainManager::GetSwapchainExtent()
+VkExtent2D IVRSwapchainManager::GetSwapchainExtent()
 {
     return SwapchainExtent_;
+}
+
+VkSwapchainKHR IVRSwapchainManager::GetSwapchain()
+{
+    return Swapchain_;
+}
+
+void IVRSwapchainManager::CreateFramebuffers(VkRenderPass renderPass, VkDevice logical_device)
+{
+    //The renderpass has been setup to expect a single framebuffer with the same format as the swapchain images
+
+    SwapchainFramebuffers_.resize(SwapchainImageViews_.size());
+
+    for(size_t i = 0; i < SwapchainImageViews_.size(); i++)
+    {
+        VkImageView attachments[] = {SwapchainImageViews_[i]};
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = renderPass; //specify the renderpass with which the framebuffer needs to be compatible
+        //compatible means that they both use the same number and type of attachments
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.width = SwapchainExtent_.width;
+        framebufferInfo.height = SwapchainExtent_.height;
+        framebufferInfo.layers = 1;
+
+        if(vkCreateFramebuffer(logical_device, &framebufferInfo, nullptr, &SwapchainFramebuffers_[i]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+
+    }
+}
+
+void IVRSwapchainManager::DestroyFramebuffers(VkDevice logical_device)
+{
+    for(VkFramebuffer framebuffer : SwapchainFramebuffers_)
+    {
+        vkDestroyFramebuffer(logical_device, framebuffer, nullptr);
+    }
+}
+
+VkFramebuffer IVRSwapchainManager::GetFramebuffer(uint32_t image_index)
+{
+    return SwapchainFramebuffers_[image_index];
 }

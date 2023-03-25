@@ -19,7 +19,7 @@ struct SwapchainSupportDetails
     std::vector<VkPresentModeKHR> presentModes;
 };
 
-class SwapchainManager {
+class IVRSwapchainManager {
 
 private:
     SwapchainSupportDetails QuerySwapchainSupport_(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
@@ -28,11 +28,12 @@ private:
     std::vector<VkImageView> SwapchainImageViews_;
     VkFormat SwapchainImageFormat_;
     VkExtent2D SwapchainExtent_;
+    std::vector<VkFramebuffer> SwapchainFramebuffers_;
 
 public:
 
-    SwapchainManager(){};
-    ~SwapchainManager(){};
+    IVRSwapchainManager(){};
+    ~IVRSwapchainManager(){};
 
     bool IsSwapchainAdequate(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
 
@@ -52,10 +53,14 @@ public:
     //Image view is a view into the image. it describes how to access the image and which part of the image to access
     // should it be treated as a 2D depth texture without any mipmapping levels
     void CreateImageViews(VkDevice logical_device);
-
     void DestroyImageViews(VkDevice logical_device);
 
     VkFormat GetSwapchainImageFormat();
     VkExtent2D GetSwapchainExtent();
+    VkSwapchainKHR GetSwapchain();
+
+    void CreateFramebuffers(VkRenderPass renderPass, VkDevice logical_device);
+    void DestroyFramebuffers(VkDevice logical_device);
+    VkFramebuffer GetFramebuffer(uint32_t image_index);
 
 };
