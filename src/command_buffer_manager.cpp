@@ -99,6 +99,8 @@ void IVRCBManager::RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t 
     
     vkCmdBindIndexBuffer(command_buffer, model->IndexBuffer_ , 0, VK_INDEX_TYPE_UINT16);
 
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+    PipelineManager_->GetPipelineLayout(), 0, 1, &PipelineManager_->DescriptorSets[image_index], 0, nullptr);
 
     vkCmdDrawIndexed(CommandBuffer_, static_cast<uint32_t>(model->indices.size()), 1, 0, 0, 0);
 

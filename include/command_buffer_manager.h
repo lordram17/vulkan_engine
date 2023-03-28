@@ -1,6 +1,8 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <memory>
+
+#include "pipeline_manager.h"
 #include "device_setup.h"
 #include "swapchain_manager.h"
 #include "model.h"
@@ -11,8 +13,15 @@ private:
 
     VkCommandPool CommandPool_;
     VkCommandBuffer CommandBuffer_;
+    
+    std::shared_ptr<IVRPipelineManager> PipelineManager_;
 
 public:
+
+    IVRCBManager(std::shared_ptr<IVRPipelineManager> pipeline_manager) :
+    PipelineManager_{pipeline_manager}
+    {
+    }
 
     void CreateCommandPool(VkPhysicalDevice physical_device, VkSurfaceKHR surface, VkDevice logical_device);
     void DestroyCommandPool(VkDevice logical_device);

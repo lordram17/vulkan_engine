@@ -54,6 +54,7 @@ public:
     // should it be treated as a 2D depth texture without any mipmapping levels
     void CreateImageViews(VkDevice logical_device);
     void DestroyImageViews(VkDevice logical_device);
+    uint16_t GetImageViewCount();
 
     VkFormat GetSwapchainImageFormat();
     VkExtent2D GetSwapchainExtent();

@@ -119,7 +119,7 @@ VkPipeline IVRPipelineManager::CreateGraphicsPipeline()
     //cullmode determines the type of face culling. This can be to cull front faces, cull back faces or both)
     //frontFace specifies the vertex order for faces to be considered front-facing (clockwise or anti-clockwise)
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     //rasterizer can alter depth values by adding a constant value or biasing them based on a fragment's slope (sometimes used for shadow mapping)
     rasterizer.depthBiasEnable = VK_FALSE;
     rasterizer.depthBiasConstantFactor = 0.0f;
@@ -181,14 +181,40 @@ VkPipeline IVRPipelineManager::CreateGraphicsPipeline()
     //Commonly used to pass tranformation matrix to the vertex shader, or to create texture samplers in the fragment shader
     // PipelineLayout_ has already been declared
 
+    VkDescriptorSetLayoutBinding ubo_layout_binding;
+    ubo_layout_binding.binding = 0; //specifies the binding used in the shader
+    ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    //it is possible for the shader variable to represent an array of uniform buffers
+    ubo_layout_binding.descriptorCount = 1; //we have a single uniform buffer
+
+    ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; //specify which shader stages the descriptor is going to be referenced
+    //this can be VK_SHADER_STAGE_ALL_GRAPHICS or a combination of VkShaderStageFlagBits values
+
+    ubo_layout_binding.pImmutableSamplers = nullptr; //only relevant to image sampling related descriptors
+
+    //all of the descriptor bindings are combined into a single VkDescriptorSetLayout object
+    VkDescriptorSetLayout descriptor_set_layout;
+    VkPipelineLayout pipeline_layout;
+
+    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_info{};
+    descriptor_set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptor_set_layout_info.bindingCount = 1;
+    descriptor_set_layout_info.pBindings = &ubo_layout_binding;
+
+    if(vkCreateDescriptorSetLayout(LogicalDevice_, &descriptor_set_layout_info, nullptr, &descriptor_set_layout) != VK_SUCCESS) 
+    {
+        throw std::runtime_error("Failed to create descriptor set layout");
+    }
+
+    CreateDescriptorPool();
+    CreateDescriptorSets(descriptor_set_layout);
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pSetLayouts = nullptr;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &descriptor_set_layout;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
-
-
 
     if(vkCreatePipelineLayout(LogicalDevice_, &pipelineLayoutInfo, nullptr, &PipelineLayout_) != VK_SUCCESS)
     {
@@ -340,6 +366,79 @@ VkRenderPass IVRPipelineManager::GetRenderPass()
     return RenderPass_;
 }
 
+void IVRPipelineManager::CreateDescriptorPool()
+{
+    //descriptor sets cannot be created directly, they must be allocated from a pool (like command buffers)
+    //we first need to specify which descriptor types our descriptors are going to contain
+
+    VkDescriptorPoolSize descriptor_pool_size{}; //need to specify how many descriptor sets
+    descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; //which descriptor types will the descriptor sets contain
+    descriptor_pool_size.descriptorCount = static_cast<uint32_t>(SwapchainManager_->GetImageViewCount());
+
+    VkDescriptorPoolCreateInfo descriptor_pool_info{};
+    descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptor_pool_info.poolSizeCount = 1; //how many pools are being created
+    descriptor_pool_info.pPoolSizes = &descriptor_pool_size;
+    descriptor_pool_info.maxSets = static_cast<uint32_t>(SwapchainManager_->GetImageViewCount()); //max sets that can be allocated
+
+    if(vkCreateDescriptorPool(LogicalDevice_, &descriptor_pool_info, nullptr, &DescriptorPool_) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create descriptor pool!");
+    }
+}
+
+void IVRPipelineManager::CreateDescriptorSets( VkDescriptorSetLayout descriptor_set_layout)
+{
+    //creating one descriptor set for each frame in flight, all with the same layout
+    std::vector<VkDescriptorSetLayout> descriptor_set_layouts(SwapchainManager_->GetImageViewCount(), descriptor_set_layout);
+    //we need multiple copies of the same descriptor set because the following struct expects one layout per set to be created
+
+    VkDescriptorSetAllocateInfo descriptor_set_alloc_info{};
+    descriptor_set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptor_set_alloc_info.descriptorPool = DescriptorPool_;
+    descriptor_set_alloc_info.descriptorSetCount = static_cast<uint32_t>(SwapchainManager_->GetImageViewCount());
+    descriptor_set_alloc_info.pSetLayouts = descriptor_set_layouts.data();
+
+    DescriptorSets.resize(SwapchainManager_->GetImageViewCount());
+
+    if(vkAllocateDescriptorSets(LogicalDevice_, &descriptor_set_alloc_info, DescriptorSets.data()) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to allocate descriptor sets!");
+    }
+
+    for(size_t i = 0; i < SwapchainManager_->GetImageViewCount(); i++)
+    {
+        //descriptors that refer to buffers, like the uniform buffer, are configured with a VkDescriptorBufferInfo struct
+        //this struct specifies the buffer and the region within it that contains the data for this descriptor
+        VkDescriptorBufferInfo buffer_info{};
+        buffer_info.buffer = UniformBufferManager_->UniformBuffers[i];
+        buffer_info.offset = 0;
+        buffer_info.range = sizeof(MVPUniformBufferObject);
+
+        VkWriteDescriptorSet descriptor_write{};
+        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_write.dstSet = DescriptorSets[i];
+        descriptor_write.dstBinding = 0;
+        descriptor_write.dstArrayElement = 0;
+
+        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptor_write.descriptorCount = 1;
+
+        descriptor_write.pBufferInfo = &buffer_info; //for descriptors that refer to buffer data
+        descriptor_write.pImageInfo = nullptr; //for descriptors that refer to image data
+        descriptor_write.pTexelBufferView = nullptr; //for descriptors that refer to buffer views
+
+        vkUpdateDescriptorSets(LogicalDevice_, 1, &descriptor_write, 0, nullptr);
+    }
+
+    
+}
+
+void IVRPipelineManager::DestroyDescriptorPoolAndLayout()
+{
+    vkDestroyDescriptorPool(LogicalDevice_, DescriptorPool_, nullptr);
+}
+
 void IVRPipelineManager::DestroyPipelineLayout()
 {
     vkDestroyPipelineLayout(LogicalDevice_, PipelineLayout_, nullptr);
@@ -378,4 +477,9 @@ VkShaderModule IVRPipelineManager::CreateShaderModule(const std::vector<char> &b
     }
 
     return shader_module;
+}
+
+VkPipelineLayout IVRPipelineManager::GetPipelineLayout()
+{
+    return PipelineLayout_;
 }

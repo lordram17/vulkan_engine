@@ -8,12 +8,15 @@
 #include <optional>
 #include <cstring>
 #include <set>
+#include <chrono>
 
 #include "instance_setup.h"
 #include "device_setup.h"
 #include "swapchain_manager.h"
 #include "pipeline_manager.h"
 #include "command_buffer_manager.h"
+#include "camera.h"
+#include "uniform_buffer_manager.h"
 
 #define NDEBUG
 
@@ -52,8 +55,10 @@ private:
     VkSurfaceKHR Surface_; //rendered images are presented to the vk surface. created by GLFW, thus connected to the glfw window using Window System Integration extensions (like VK_KHR_surface)
     
     std::shared_ptr<IVRSwapchainManager> SwapchainManager_;
-    IVRCBManager CommandBufferManager_{};
+    std::shared_ptr<IVRCBManager> CommandBufferManager_;
+    std::shared_ptr<IVRPipelineManager> PipelineManager_;
     std::shared_ptr<IVRModel> Model_;
+    std::shared_ptr<IVRUBManager> UniformBufferManager_;
 
     VkSemaphore ImageAvailableSemaphore_;
     VkSemaphore RenderFinishedSemaphore_;
@@ -76,5 +81,7 @@ private:
     void DrawFrame();
 
     void CreateSyncObjects();
+
+    void UpdateMVPUniformBuffer(uint32_t current_image_index);
 
 };

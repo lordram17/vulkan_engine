@@ -241,6 +241,11 @@ void IVRSwapchainManager::DestroyImageViews(VkDevice logical_device)
     }
 }
 
+uint16_t IVRSwapchainManager::GetImageViewCount()
+{
+    return (uint16_t) SwapchainImageViews_.size();
+}
+
 VkFormat IVRSwapchainManager::GetSwapchainImageFormat()
 {
     return SwapchainImageFormat_;

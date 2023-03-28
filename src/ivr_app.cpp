@@ -34,19 +34,22 @@ void IvrApp::initVulkan() {
     SwapchainManager_->CreateSwapchain(LogicalDevice_, PhysicalDevice_, Surface_, device_creator.GetDeviceQueueFamilies());
     SwapchainManager_->CreateImageViews(LogicalDevice_);
      
-    IVRPipelineManager pipeline_manager(LogicalDevice_, SwapchainManager_);
-    GraphicsPipeline_ = pipeline_manager.CreateGraphicsPipeline();
-    RenderPass_ = pipeline_manager.GetRenderPass();
+    UniformBufferManager_ = std::make_shared<IVRUBManager>(LogicalDevice_, PhysicalDevice_, SwapchainManager_->GetImageViewCount());
+    UniformBufferManager_->CreateUniformBuffers();
+
+    PipelineManager_ = std::make_shared<IVRPipelineManager>(LogicalDevice_, SwapchainManager_, UniformBufferManager_);
+    GraphicsPipeline_ = PipelineManager_->CreateGraphicsPipeline();
+    RenderPass_ = PipelineManager_->GetRenderPass();
     SwapchainManager_->CreateFramebuffers(RenderPass_, LogicalDevice_);
 
     uint32_t graphics_queue_family_index = FindQueueFamilies(PhysicalDevice_, Surface_).graphicsFamily;
     Model_ = std::make_shared<IVRModel>(LogicalDevice_, PhysicalDevice_, GraphicsQueue_, graphics_queue_family_index);
     Model_->CreateVertexBuffer();
     Model_->CreateIndexBuffer();
-
-
-    CommandBufferManager_.CreateCommandPool(PhysicalDevice_, Surface_, LogicalDevice_);
-    CommandBuffer_ = CommandBufferManager_.CreateCommandBuffer(LogicalDevice_);
+    
+    CommandBufferManager_ = std::make_shared<IVRCBManager>(PipelineManager_);
+    CommandBufferManager_->CreateCommandPool(PhysicalDevice_, Surface_, LogicalDevice_);
+    CommandBuffer_ = CommandBufferManager_->CreateCommandBuffer(LogicalDevice_);
 
     CreateSyncObjects();
 }
@@ -99,8 +102,10 @@ void IvrApp::DrawFrame()
     //the returned image_index refers to the VkImage in our swapchainImages array. This index is used to pick the framebuffer
     vkAcquireNextImageKHR(LogicalDevice_, SwapchainManager_->GetSwapchain(), UINT64_MAX, ImageAvailableSemaphore_, VK_NULL_HANDLE, &image_index);
 
+    UpdateMVPUniformBuffer(image_index);
+
     vkResetCommandBuffer(CommandBuffer_, 0);
-    CommandBufferManager_.RecordCommandBuffer(CommandBuffer_, image_index, RenderPass_, SwapchainManager_, GraphicsPipeline_, Model_);
+    CommandBufferManager_->RecordCommandBuffer(CommandBuffer_, image_index, RenderPass_, SwapchainManager_, GraphicsPipeline_, Model_);
 
     VkSubmitInfo submit_info{};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -159,6 +164,25 @@ void IvrApp::CreateSyncObjects()
     {
         throw std::runtime_error("Failed to create fence");
     }
+}
+
+void IvrApp::UpdateMVPUniformBuffer(uint32_t current_image_index)
+{
+    static auto start_time = std::chrono::high_resolution_clock::now();
+
+    auto current_time = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - start_time).count();
+
+    MVPUniformBufferObject mvp_ubo{};
+    mvp_ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    mvp_ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    mvp_ubo.proj = glm::perspective(glm::radians(45.0f), 
+                    SwapchainManager_->GetSwapchainExtent().width / (float) SwapchainManager_->GetSwapchainExtent().height, 
+                    0.1f, 10.0f);
+    mvp_ubo.proj[1][1] *= -1; //glm was originally designed for OpenGL where the Y-coordinate of the clip coordinates is inverted
+    //to compensate for this, the scaling factor of the Y-axis is sign-flipped
+
+    memcpy(UniformBufferManager_->UniformBuffersMapped[current_image_index], &mvp_ubo, sizeof(MVPUniformBufferObject));
 }
 
 int main() {
