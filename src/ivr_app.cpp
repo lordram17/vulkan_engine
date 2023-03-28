@@ -1,4 +1,3 @@
-
 #include "ivr_app.h"
 
 
@@ -40,11 +39,16 @@ void IvrApp::initVulkan() {
     RenderPass_ = pipeline_manager.GetRenderPass();
     SwapchainManager_->CreateFramebuffers(RenderPass_, LogicalDevice_);
 
+    uint32_t graphics_queue_family_index = FindQueueFamilies(PhysicalDevice_, Surface_).graphicsFamily;
+    Model_ = std::make_shared<IVRModel>(LogicalDevice_, PhysicalDevice_, GraphicsQueue_, graphics_queue_family_index);
+    Model_->CreateVertexBuffer();
+    Model_->CreateIndexBuffer();
+
+
     CommandBufferManager_.CreateCommandPool(PhysicalDevice_, Surface_, LogicalDevice_);
     CommandBuffer_ = CommandBufferManager_.CreateCommandBuffer(LogicalDevice_);
 
     CreateSyncObjects();
-    
 }
 
 void IvrApp::mainLoop() {
@@ -96,7 +100,7 @@ void IvrApp::DrawFrame()
     vkAcquireNextImageKHR(LogicalDevice_, SwapchainManager_->GetSwapchain(), UINT64_MAX, ImageAvailableSemaphore_, VK_NULL_HANDLE, &image_index);
 
     vkResetCommandBuffer(CommandBuffer_, 0);
-    CommandBufferManager_.RecordCommandBuffer(CommandBuffer_, image_index, RenderPass_, SwapchainManager_, GraphicsPipeline_);
+    CommandBufferManager_.RecordCommandBuffer(CommandBuffer_, image_index, RenderPass_, SwapchainManager_, GraphicsPipeline_, Model_);
 
     VkSubmitInfo submit_info{};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

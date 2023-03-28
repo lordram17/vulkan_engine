@@ -198,7 +198,6 @@ void IVRSwapchainManager::RetrieveSwapchainImages(VkDevice logical_device)
     vkGetSwapchainImagesKHR(logical_device, Swapchain_, &image_count, SwapchainImages_.data());
 }
 
-//this function is not yet called anywhere
 void IVRSwapchainManager::CreateImageViews(VkDevice logical_device)
 {
     SwapchainImageViews_.resize(SwapchainImages_.size());

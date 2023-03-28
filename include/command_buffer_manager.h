@@ -3,6 +3,7 @@
 #include <memory>
 #include "device_setup.h"
 #include "swapchain_manager.h"
+#include "model.h"
 
 class IVRCBManager
 {
@@ -19,6 +20,6 @@ public:
     VkCommandBuffer CreateCommandBuffer(VkDevice logical_device);
     void RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index, 
                             VkRenderPass renderpass, std::shared_ptr<IVRSwapchainManager> swapchain_manager,
-                            VkPipeline graphics_pipeline);
+                            VkPipeline graphics_pipeline, std::shared_ptr<IVRModel> model);
 
 };

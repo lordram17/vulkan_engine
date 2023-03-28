@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vulkan/vulkan.h>
 #include "swapchain_manager.h"
+#include "model.h"
 #include <memory>
 
 class IVRPipelineManager 

@@ -42,7 +42,7 @@ VkCommandBuffer IVRCBManager::CreateCommandBuffer(VkDevice logical_device)
 
 void IVRCBManager::RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index, 
                                         VkRenderPass renderpass, std::shared_ptr<IVRSwapchainManager> swapchain_manager,
-                                        VkPipeline graphics_pipeline)
+                                        VkPipeline graphics_pipeline, std::shared_ptr<IVRModel> model)
 {
     //this function writes the commands we want to execute into a command buffer
 
@@ -93,7 +93,16 @@ void IVRCBManager::RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t 
     scissor.extent = swapchain_manager->GetSwapchainExtent();
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-    vkCmdDraw(command_buffer, 3, 1, 0, 0);
+    VkBuffer vertex_buffers[] = {model->VertexBuffer_};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, offsets);
+    
+    vkCmdBindIndexBuffer(command_buffer, model->IndexBuffer_ , 0, VK_INDEX_TYPE_UINT16);
+
+
+    vkCmdDrawIndexed(CommandBuffer_, static_cast<uint32_t>(model->indices.size()), 1, 0, 0, 0);
+
+    //vkCmdDraw(command_buffer, 3, 1, 0, 0);
     // vertexCount : number of vertices to draw
     // instanceCount : used for instanced rendering, use 1 if not doing that
     // firstVertex : used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex

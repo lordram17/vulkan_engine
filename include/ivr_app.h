@@ -42,6 +42,7 @@ private:
     VkDevice LogicalDevice_;
     
     VkQueue GraphicsQueue_; //queues are automatically created along with the logical device. Also they are implicitly cleaned when the device is destroyed.
+    uint32_t GraphicsQueueFamilyIndex_;
     VkQueue PresentQueue_;
 
     VkCommandBuffer CommandBuffer_;
@@ -52,6 +53,7 @@ private:
     
     std::shared_ptr<IVRSwapchainManager> SwapchainManager_;
     IVRCBManager CommandBufferManager_{};
+    std::shared_ptr<IVRModel> Model_;
 
     VkSemaphore ImageAvailableSemaphore_;
     VkSemaphore RenderFinishedSemaphore_;

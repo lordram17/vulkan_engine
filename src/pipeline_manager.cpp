@@ -40,12 +40,15 @@ VkPipeline IVRPipelineManager::CreateGraphicsPipeline()
 
     // pVertexBindingDescriptions and pVertexAttributeDescriptions point to array of structs
 
+    VkVertexInputBindingDescription binding_description = Vertex::getBindingDescription();
+    std::vector<VkVertexInputAttributeDescription> attribute_descriptions = Vertex::getAttributeDescription();
+
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.pVertexBindingDescriptions = nullptr;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
-    vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexBindingDescriptions = &binding_description;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_descriptions.size());
+    vertexInputInfo.pVertexAttributeDescriptions = attribute_descriptions.data();
 
     // Input Assembly
     // describes what kind of geometry will be drawn from the vertices (point list, line list, line strip, triangle list, triangle strip)
