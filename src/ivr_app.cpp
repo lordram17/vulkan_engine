@@ -41,11 +41,14 @@ void IvrApp::initVulkan() {
 
     std::shared_ptr<IVRTexObj> sample_texture = std::make_shared<IVRTexObj>(LogicalDevice_, PhysicalDevice_, 
                                                                         graphics_queue_family_index, GraphicsQueue_, "../texture_files/statue.jpg");
+    std::shared_ptr<IVRDepthImage> depth_image = std::make_shared<IVRDepthImage>(LogicalDevice_, PhysicalDevice_, 
+                                                                        graphics_queue_family_index, GraphicsQueue_, 
+                                                                        SwapchainManager_->GetSwapchainExtent());
 
-    PipelineManager_ = std::make_shared<IVRPipelineManager>(LogicalDevice_, SwapchainManager_, UniformBufferManager_, sample_texture);
+    PipelineManager_ = std::make_shared<IVRPipelineManager>(LogicalDevice_, SwapchainManager_, UniformBufferManager_, sample_texture, depth_image);
     GraphicsPipeline_ = PipelineManager_->CreateGraphicsPipeline();
     RenderPass_ = PipelineManager_->GetRenderPass();
-    SwapchainManager_->CreateFramebuffers(RenderPass_, LogicalDevice_);
+    SwapchainManager_->CreateFramebuffers(RenderPass_, LogicalDevice_, depth_image->GetDepthImageView());
     
     Model_ = std::make_shared<IVRModel>(LogicalDevice_, PhysicalDevice_, GraphicsQueue_, graphics_queue_family_index);
     Model_->CreateVertexBuffer();

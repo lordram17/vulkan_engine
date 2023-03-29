@@ -9,7 +9,7 @@
 
 struct Vertex {
     //vertex has 2 attributes
-    glm::vec2 pos;
+    glm::vec3 pos;
     glm::vec3 color;
     glm::vec2 texCoord;
     
@@ -38,7 +38,7 @@ struct Vertex {
         //the first attribute is position (corresponding to location=0 in the vertex shader)
         attributeDescriptions[0].binding = 0; //from which binding index does the per vertex data come?
         attributeDescriptions[0].location = 0; //location directive of the input in vertex shader
-        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT; //type of data of this attribute
+        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT; //type of data of this attribute
         //the number of color channelsbuffer_spawner
         attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
@@ -80,14 +80,20 @@ public:
     VkBuffer IndexBuffer_;
 
     const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.8f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+        {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+
+        {{-0.5f, -0.5f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, -0.5f, 1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, 0.5f, 1.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0.5f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
     };
 
     const std::vector<uint16_t> indices = {
-        0, 1, 2, 2, 3, 0
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4
     };
 
     void CreateVertexBuffer();

@@ -9,6 +9,7 @@
 #include "model.h"
 #include "uniform_buffer_manager.h"
 #include "texture.h"
+#include "depth_image.h"
 
 
 class IVRPipelineManager 
@@ -22,18 +23,21 @@ private:
     VkRenderPass RenderPass_;
     VkPipeline Pipeline_;
     std::shared_ptr<IVRTexObj> TextureObject_;
+    std::shared_ptr<IVRDepthImage> DepthImage_;
     
     VkDescriptorPool DescriptorPool_;
 
 public:
 
     IVRPipelineManager(VkDevice logical_device, std::shared_ptr<IVRSwapchainManager> swapchain_manager,
-        std::shared_ptr<IVRUBManager> uniform_buffer_manager, std::shared_ptr<IVRTexObj> texture_object)
+        std::shared_ptr<IVRUBManager> uniform_buffer_manager, std::shared_ptr<IVRTexObj> texture_object, 
+        std::shared_ptr<IVRDepthImage> depth_image)
     {
         LogicalDevice_ = logical_device;
         SwapchainManager_ = swapchain_manager;
         UniformBufferManager_ = uniform_buffer_manager;
         TextureObject_ = texture_object;
+        DepthImage_ = depth_image;
     }
 
     std::vector<VkDescriptorSet> DescriptorSets;

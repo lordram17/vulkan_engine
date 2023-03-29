@@ -1,7 +1,9 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <array>
 #include "device_setup.h"
+
 #include "texture.h"
 
 //Swapchain is essentially a queue of images waiting to be presented to the screen
@@ -61,7 +63,7 @@ public:
     VkExtent2D GetSwapchainExtent();
     VkSwapchainKHR GetSwapchain();
 
-    void CreateFramebuffers(VkRenderPass renderPass, VkDevice logical_device);
+    void CreateFramebuffers(VkRenderPass renderPass, VkDevice logical_device, VkImageView depth_image_view);
     void DestroyFramebuffers(VkDevice logical_device);
     VkFramebuffer GetFramebuffer(uint32_t image_index);
 

@@ -43,7 +43,8 @@ void IVRTexObj::CreateTextureImage()
 
     stbi_image_free(pixels); //cleaning up the pixel array
 
-    CreateVkImage(tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+    CreateVkImage(LogicalDevice_, PhysicalDevice_, 
+    tex_width, tex_height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, TextureImage_, TextureImageMemory_);
 
@@ -52,14 +53,16 @@ void IVRTexObj::CreateTextureImage()
     // 1. Transition the layout of texture image to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     // 2. Execute the buffer to image copy operation
 
-    TransitionImageLayout(TextureImage_, VK_FORMAT_R8G8B8A8_SRGB, 
+    TransitionImageLayout(LogicalDevice_, QueueFamilyIndex_, Queue_,
+        TextureImage_, VK_FORMAT_R8G8B8A8_SRGB, 
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     
     CopyBufferToImage(staging_buffer, TextureImage_, 
         static_cast<uint32_t>(tex_width), static_cast<uint32_t>(tex_height));
 
     //To start sampling from the image, we need another layout transition
-    TransitionImageLayout(TextureImage_, VK_FORMAT_R8G8B8A8_SRGB,
+    TransitionImageLayout(LogicalDevice_, QueueFamilyIndex_, Queue_,
+        TextureImage_, VK_FORMAT_R8G8B8A8_SRGB,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     
     vkDestroyBuffer(LogicalDevice_, staging_buffer, nullptr);
@@ -67,7 +70,8 @@ void IVRTexObj::CreateTextureImage()
 
 }
 
-void IVRTexObj::CreateVkImage(uint32_t width, uint32_t height, VkFormat format, 
+void IVRTexObj::CreateVkImage(VkDevice logical_device, VkPhysicalDevice physical_device,
+    uint32_t width, uint32_t height, VkFormat format, 
     VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memory_property_flags, 
     VkImage &image, VkDeviceMemory &image_memory)
 {
@@ -97,29 +101,29 @@ void IVRTexObj::CreateVkImage(uint32_t width, uint32_t height, VkFormat format,
     image_info.samples = VK_SAMPLE_COUNT_1_BIT; //related to multisampling, only relevant for images that will be used as attachments
     image_info.flags = 0; //some optional flags for images that will be used as sparse images
 
-    if(vkCreateImage(LogicalDevice_, &image_info, nullptr, &image) != VK_SUCCESS)
+    if(vkCreateImage(logical_device, &image_info, nullptr, &image) != VK_SUCCESS)
     {
         throw std::runtime_error("Could not create texture image");
     }
 
     VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(LogicalDevice_, image, &memory_requirements);
+    vkGetImageMemoryRequirements(logical_device, image, &memory_requirements);
 
     VkMemoryAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.allocationSize = memory_requirements.size;
-    alloc_info.memoryTypeIndex = IVRBufferUtilities::FindMemoryType(PhysicalDevice_, 
+    alloc_info.memoryTypeIndex = IVRBufferUtilities::FindMemoryType(physical_device, 
     memory_requirements.memoryTypeBits, memory_property_flags);
 
-    if(vkAllocateMemory(LogicalDevice_, &alloc_info, nullptr, &image_memory) != VK_SUCCESS)
+    if(vkAllocateMemory(logical_device, &alloc_info, nullptr, &image_memory) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate image memory");
     }
 
-    vkBindImageMemory(LogicalDevice_, image, image_memory, 0);
+    vkBindImageMemory(logical_device, image, image_memory, 0);
 }
 
-VkImageView IVRTexObj::CreateVkImageView(VkDevice logical_device, VkImage image, VkFormat format)
+VkImageView IVRTexObj::CreateVkImageView(VkDevice logical_device, VkImage image, VkFormat format, VkImageAspectFlags aspect_flags)
 {
     
     VkImageViewCreateInfo view_info{};
@@ -127,7 +131,7 @@ VkImageView IVRTexObj::CreateVkImageView(VkDevice logical_device, VkImage image,
     view_info.image = image;
     view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view_info.format = format;
-    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    view_info.subresourceRange.aspectMask = aspect_flags;
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.levelCount = 1;
     view_info.subresourceRange.baseArrayLayer = 0;
@@ -146,7 +150,7 @@ VkImageView IVRTexObj::CreateVkImageView(VkDevice logical_device, VkImage image,
 
 void IVRTexObj::CreateTextureImageView()
 {
-    TextureImageView_ = CreateVkImageView(LogicalDevice_, TextureImage_, VK_FORMAT_R8G8B8A8_SRGB);
+    TextureImageView_ = CreateVkImageView(LogicalDevice_, TextureImage_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 VkImageView IVRTexObj::GetTextureImageView()
@@ -201,14 +205,14 @@ VkSampler IVRTexObj::GetTextureSampler()
     return TextureSampler_;
 }
 
-VkCommandPool IVRTexObj::CreateCommandPool()
+VkCommandPool IVRTexObj::CreateCommandPool(VkDevice logical_device, uint32_t queue_family_index)
 {
     VkCommandPool command_pool;
     VkCommandPoolCreateInfo pool_info{};
     pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-    pool_info.queueFamilyIndex = QueueFamilyIndex_;
-    if(vkCreateCommandPool(LogicalDevice_, &pool_info, nullptr, &command_pool) != VK_SUCCESS)
+    pool_info.queueFamilyIndex = queue_family_index;
+    if(vkCreateCommandPool(logical_device, &pool_info, nullptr, &command_pool) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create command pool for texture image work");
     }
@@ -216,7 +220,7 @@ VkCommandPool IVRTexObj::CreateCommandPool()
     return command_pool;
 }
 
-VkCommandBuffer IVRTexObj::BeginSingleTimeCommands(VkCommandPool command_pool)
+VkCommandBuffer IVRTexObj::BeginSingleTimeCommands(VkDevice logical_device, VkCommandPool command_pool)
 {
     VkCommandBufferAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -225,7 +229,7 @@ VkCommandBuffer IVRTexObj::BeginSingleTimeCommands(VkCommandPool command_pool)
     alloc_info.commandBufferCount = 1;
 
     VkCommandBuffer command_buffer;
-    vkAllocateCommandBuffers(LogicalDevice_, &alloc_info, &command_buffer);
+    vkAllocateCommandBuffers(logical_device, &alloc_info, &command_buffer);
 
     VkCommandBufferBeginInfo begin_info{};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -236,7 +240,7 @@ VkCommandBuffer IVRTexObj::BeginSingleTimeCommands(VkCommandPool command_pool)
     return command_buffer;
 }
 
-void IVRTexObj::EndSingleTimeCommands(VkCommandBuffer command_buffer, VkCommandPool command_pool)
+void IVRTexObj::EndSingleTimeCommands(VkDevice logical_device, VkQueue queue, VkCommandBuffer command_buffer, VkCommandPool command_pool)
 {
     vkEndCommandBuffer(command_buffer);
 
@@ -245,30 +249,30 @@ void IVRTexObj::EndSingleTimeCommands(VkCommandBuffer command_buffer, VkCommandP
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &command_buffer;
 
-    vkQueueSubmit(Queue_, 1, &submit_info, VK_NULL_HANDLE);
-    vkQueueWaitIdle(Queue_);
+    vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(queue);
 
-    vkFreeCommandBuffers(LogicalDevice_, command_pool, 1, &command_buffer);
-    vkDestroyCommandPool(LogicalDevice_, command_pool, nullptr);
+    vkFreeCommandBuffers(logical_device, command_pool, 1, &command_buffer);
+    vkDestroyCommandPool(logical_device, command_pool, nullptr);
 }
 
 void IVRTexObj::CopyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize buffer_size)
 {
-    VkCommandPool command_pool = CreateCommandPool();
-    VkCommandBuffer command_buffer = BeginSingleTimeCommands(command_pool);
+    VkCommandPool command_pool = CreateCommandPool(LogicalDevice_, QueueFamilyIndex_);
+    VkCommandBuffer command_buffer = BeginSingleTimeCommands(LogicalDevice_, command_pool);
 
     VkBufferCopy copy_region{};
     copy_region.size = buffer_size;
 
     vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
 
-    EndSingleTimeCommands(command_buffer, command_pool);
+    EndSingleTimeCommands(LogicalDevice_, Queue_, command_buffer, command_pool);
 }
 
 void IVRTexObj::CopyBufferToImage(VkBuffer src_buffer, VkImage image, uint32_t width, uint32_t height)
 {
-    VkCommandPool command_pool = CreateCommandPool();
-    VkCommandBuffer command_buffer = BeginSingleTimeCommands(command_pool);
+    VkCommandPool command_pool = CreateCommandPool(LogicalDevice_, QueueFamilyIndex_);
+    VkCommandBuffer command_buffer = BeginSingleTimeCommands(LogicalDevice_, command_pool);
 
     VkBufferImageCopy region{};
     region.bufferOffset = 0;
@@ -285,13 +289,14 @@ void IVRTexObj::CopyBufferToImage(VkBuffer src_buffer, VkImage image, uint32_t w
 
     vkCmdCopyBufferToImage(command_buffer, src_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-    EndSingleTimeCommands(command_buffer, command_pool);
+    EndSingleTimeCommands(LogicalDevice_, Queue_, command_buffer, command_pool);
 }
 
-void IVRTexObj::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout)
+void IVRTexObj::TransitionImageLayout(VkDevice logical_device, uint32_t queue_family_index, VkQueue queue,
+    VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout)
 {
-    VkCommandPool command_pool = CreateCommandPool();
-    VkCommandBuffer command_buffer = BeginSingleTimeCommands(command_pool);
+    VkCommandPool command_pool = CreateCommandPool(logical_device, queue_family_index);
+    VkCommandBuffer command_buffer = BeginSingleTimeCommands(logical_device, command_pool);
 
     //a common way to perform layout transitions is using an image memory barrier
     //this kind of pipeline barrier like this is generally used to synchronize access to resources
@@ -308,11 +313,24 @@ void IVRTexObj::TransitionImageLayout(VkImage image, VkFormat format, VkImageLay
 
     barrier.image = image;
     // Note : interestingly imageviewcreateinfo also have subresourceRange with the same fields
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = 1;
+
+    if(new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+    {
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+        if(IVRDepthImage::HasStencilComponent(format))
+        {
+            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+    }
+    else
+    {
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
 
     //Note : In PipelineManager SubpassDependency have the same following two fields
     barrier.srcAccessMask = 0; //To Do
@@ -344,6 +362,19 @@ void IVRTexObj::TransitionImageLayout(VkImage image, VkFormat format, VkImageLay
         source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     }
+    else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
+            new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destination_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        //depth buffer will be read to perform depth tests to see if a fragment is visible
+        //  and it will be written to when a new fragment is drawn
+        //reading happens in VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+        //writing happens in VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+    }
     else
     {
         throw std::invalid_argument("Unsupported layout transition!");
@@ -355,7 +386,7 @@ void IVRTexObj::TransitionImageLayout(VkImage image, VkFormat format, VkImageLay
         0, 0, 
         nullptr, 0, nullptr, 1, &barrier);
 
-    EndSingleTimeCommands(command_buffer, command_pool);
+    EndSingleTimeCommands(logical_device, queue, command_buffer, command_pool);
 }
 
 void IVRTexObj::CleanUp()

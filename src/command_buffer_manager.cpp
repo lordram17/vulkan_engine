@@ -61,20 +61,22 @@ void IVRCBManager::RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t 
     // STARTING A RENDER PASS
     // drawing starts by beginning the render pass
 
-    VkRenderPassBeginInfo render_pass_info{};
-    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    render_pass_info.renderPass = renderpass;
-    render_pass_info.framebuffer = swapchain_manager->GetFramebuffer(image_index);
+    VkRenderPassBeginInfo render_pass_begin_info{};
+    render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    render_pass_begin_info.renderPass = renderpass;
+    render_pass_begin_info.framebuffer = swapchain_manager->GetFramebuffer(image_index);
 
-    render_pass_info.renderArea.offset = {0,0};
-    render_pass_info.renderArea.extent = swapchain_manager->GetSwapchainExtent();
+    render_pass_begin_info.renderArea.offset = {0,0};
+    render_pass_begin_info.renderArea.extent = swapchain_manager->GetSwapchainExtent();
     //renderArea defines where the shader loads and stores will take place. Pixels outside this region will have undefined values.
 
-    VkClearValue clear_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    render_pass_info.clearValueCount= 1;
-    render_pass_info.pClearValues = &clear_color;
+    std::array<VkClearValue, 2> clear_color {};
+    clear_color[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+    clear_color[1].depthStencil = {1.0f, 0};
+    render_pass_begin_info.clearValueCount= 2;
+    render_pass_begin_info.pClearValues = clear_color.data();
     
-    vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
 

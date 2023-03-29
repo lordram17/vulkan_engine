@@ -204,7 +204,8 @@ void IVRSwapchainManager::CreateImageViews(VkDevice logical_device)
 
     for(size_t i = 0; i < SwapchainImageViews_.size(); i++)
     {
-        SwapchainImageViews_[i] = IVRTexObj::CreateVkImageView(logical_device, SwapchainImages_[i], SwapchainImageFormat_);
+        SwapchainImageViews_[i] = IVRTexObj::CreateVkImageView(logical_device, SwapchainImages_[i], 
+                                                                SwapchainImageFormat_, VK_IMAGE_ASPECT_COLOR_BIT);
          /*
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -264,7 +265,7 @@ VkSwapchainKHR IVRSwapchainManager::GetSwapchain()
     return Swapchain_;
 }
 
-void IVRSwapchainManager::CreateFramebuffers(VkRenderPass renderPass, VkDevice logical_device)
+void IVRSwapchainManager::CreateFramebuffers(VkRenderPass renderPass, VkDevice logical_device, VkImageView depth_image_view)
 {
     //The renderpass has been setup to expect a single framebuffer with the same format as the swapchain images
 
@@ -272,14 +273,14 @@ void IVRSwapchainManager::CreateFramebuffers(VkRenderPass renderPass, VkDevice l
 
     for(size_t i = 0; i < SwapchainImageViews_.size(); i++)
     {
-        VkImageView attachments[] = {SwapchainImageViews_[i]};
+        std::array<VkImageView, 2> attachments = {SwapchainImageViews_[i], depth_image_view};
 
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = renderPass; //specify the renderpass with which the framebuffer needs to be compatible
         //compatible means that they both use the same number and type of attachments
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
         framebufferInfo.width = SwapchainExtent_.width;
         framebufferInfo.height = SwapchainExtent_.height;
         framebufferInfo.layers = 1;
