@@ -17,6 +17,7 @@
 #include "command_buffer_manager.h"
 #include "camera.h"
 #include "uniform_buffer_manager.h"
+#include "texture.h"
 
 #define NDEBUG
 

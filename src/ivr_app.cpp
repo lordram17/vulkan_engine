@@ -30,6 +30,8 @@ void IvrApp::initVulkan() {
     GraphicsQueue_ = device_creator.GetGraphicsQueue();
     PresentQueue_ = device_creator.GetPresentQueue();
 
+    uint32_t graphics_queue_family_index = FindQueueFamilies(PhysicalDevice_, Surface_).graphicsFamily;
+
     SwapchainManager_ = std::make_shared<IVRSwapchainManager>();
     SwapchainManager_->CreateSwapchain(LogicalDevice_, PhysicalDevice_, Surface_, device_creator.GetDeviceQueueFamilies());
     SwapchainManager_->CreateImageViews(LogicalDevice_);
@@ -37,12 +39,14 @@ void IvrApp::initVulkan() {
     UniformBufferManager_ = std::make_shared<IVRUBManager>(LogicalDevice_, PhysicalDevice_, SwapchainManager_->GetImageViewCount());
     UniformBufferManager_->CreateUniformBuffers();
 
-    PipelineManager_ = std::make_shared<IVRPipelineManager>(LogicalDevice_, SwapchainManager_, UniformBufferManager_);
+    std::shared_ptr<IVRTexObj> sample_texture = std::make_shared<IVRTexObj>(LogicalDevice_, PhysicalDevice_, 
+                                                                        graphics_queue_family_index, GraphicsQueue_, "../texture_files/statue.jpg");
+
+    PipelineManager_ = std::make_shared<IVRPipelineManager>(LogicalDevice_, SwapchainManager_, UniformBufferManager_, sample_texture);
     GraphicsPipeline_ = PipelineManager_->CreateGraphicsPipeline();
     RenderPass_ = PipelineManager_->GetRenderPass();
     SwapchainManager_->CreateFramebuffers(RenderPass_, LogicalDevice_);
-
-    uint32_t graphics_queue_family_index = FindQueueFamilies(PhysicalDevice_, Surface_).graphicsFamily;
+    
     Model_ = std::make_shared<IVRModel>(LogicalDevice_, PhysicalDevice_, GraphicsQueue_, graphics_queue_family_index);
     Model_->CreateVertexBuffer();
     Model_->CreateIndexBuffer();

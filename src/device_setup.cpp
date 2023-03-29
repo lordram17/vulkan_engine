@@ -42,11 +42,11 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
 
 bool IVRDeviceCreator::IsDeviceSuitable_(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
-    VkPhysicalDeviceProperties deviceProperties; //basic device properties like name, type and supported vulkan version
-    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+    VkPhysicalDeviceProperties device_properties; //basic device properties like name, type and supported vulkan version
+    vkGetPhysicalDeviceProperties(device, &device_properties);
 
-    VkPhysicalDeviceFeatures deviceFeatures; //support for optional features like texture compression, 64 bit float, multi viewport rendering
-    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+    VkPhysicalDeviceFeatures device_features; //support for optional features like texture compression, 64 bit float, multi viewport rendering
+    vkGetPhysicalDeviceFeatures(device, &device_features);
 
     // can add logic to check if device is suitable or choose from multiple devices based on a score alloted depending on their capabilities
 
@@ -54,7 +54,7 @@ bool IVRDeviceCreator::IsDeviceSuitable_(VkPhysicalDevice device, VkSurfaceKHR s
 
     QueueFamilyIndices indices = FindQueueFamilies(device, surface);
 
-    return indices.isComplete() && extensions_supported;
+    return indices.isComplete() && extensions_supported && device_features.samplerAnisotropy;
 }
 
 bool IVRDeviceCreator::CheckDeviceExtensionSupport_(VkPhysicalDevice physical_device)
@@ -143,6 +143,7 @@ VkDevice IVRDeviceCreator::CreateLogicalDevice(VkSurfaceKHR surface)
 
 
     VkPhysicalDeviceFeatures deviceFeatures{};
+    deviceFeatures.samplerAnisotropy = VK_TRUE; //enable anisotropic filtering
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

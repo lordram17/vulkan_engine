@@ -192,14 +192,24 @@ VkPipeline IVRPipelineManager::CreateGraphicsPipeline()
 
     ubo_layout_binding.pImmutableSamplers = nullptr; //only relevant to image sampling related descriptors
 
+    //layout binding for the texture sampler
+    VkDescriptorSetLayoutBinding sampler_layout_binding;
+    sampler_layout_binding.binding = 1;
+    sampler_layout_binding.descriptorCount = 1;
+    sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    sampler_layout_binding.pImmutableSamplers = nullptr;
+    sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {ubo_layout_binding, sampler_layout_binding};
+
     //all of the descriptor bindings are combined into a single VkDescriptorSetLayout object
     VkDescriptorSetLayout descriptor_set_layout;
     VkPipelineLayout pipeline_layout;
 
     VkDescriptorSetLayoutCreateInfo descriptor_set_layout_info{};
     descriptor_set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptor_set_layout_info.bindingCount = 1;
-    descriptor_set_layout_info.pBindings = &ubo_layout_binding;
+    descriptor_set_layout_info.bindingCount = static_cast<uint32_t>(bindings.size());
+    descriptor_set_layout_info.pBindings = bindings.data();
 
     if(vkCreateDescriptorSetLayout(LogicalDevice_, &descriptor_set_layout_info, nullptr, &descriptor_set_layout) != VK_SUCCESS) 
     {
@@ -371,15 +381,21 @@ void IVRPipelineManager::CreateDescriptorPool()
     //descriptor sets cannot be created directly, they must be allocated from a pool (like command buffers)
     //we first need to specify which descriptor types our descriptors are going to contain
 
-    VkDescriptorPoolSize descriptor_pool_size{}; //need to specify how many descriptor sets
-    descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; //which descriptor types will the descriptor sets contain
-    descriptor_pool_size.descriptorCount = static_cast<uint32_t>(SwapchainManager_->GetImageViewCount());
+    std::array<VkDescriptorPoolSize, 2> descriptor_pool_sizes{}; //need to specify how many descriptor sets
 
+    descriptor_pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; //which descriptor types will the descriptor sets contain
+    descriptor_pool_sizes[0].descriptorCount = static_cast<uint32_t>(SwapchainManager_->GetImageViewCount());
+
+    descriptor_pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_pool_sizes[1].descriptorCount = static_cast<uint32_t>(SwapchainManager_->GetImageViewCount());
+    
     VkDescriptorPoolCreateInfo descriptor_pool_info{};
     descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    descriptor_pool_info.poolSizeCount = 1; //how many pools are being created
-    descriptor_pool_info.pPoolSizes = &descriptor_pool_size;
+    descriptor_pool_info.poolSizeCount = static_cast<uint32_t>(descriptor_pool_sizes.size()); //how many pools are being created
+    descriptor_pool_info.pPoolSizes = descriptor_pool_sizes.data(); //pointer to the array of pool sizes
     descriptor_pool_info.maxSets = static_cast<uint32_t>(SwapchainManager_->GetImageViewCount()); //max sets that can be allocated
+
+    //Note : inadequate descriptor pools cause errors that the validation layers cannot detect
 
     if(vkCreateDescriptorPool(LogicalDevice_, &descriptor_pool_info, nullptr, &DescriptorPool_) != VK_SUCCESS)
     {
@@ -415,20 +431,37 @@ void IVRPipelineManager::CreateDescriptorSets( VkDescriptorSetLayout descriptor_
         buffer_info.offset = 0;
         buffer_info.range = sizeof(MVPUniformBufferObject);
 
-        VkWriteDescriptorSet descriptor_write{};
-        descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptor_write.dstSet = DescriptorSets[i];
-        descriptor_write.dstBinding = 0;
-        descriptor_write.dstArrayElement = 0;
+        VkDescriptorImageInfo image_info{};
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_info.imageView = TextureObject_->GetTextureImageView();
+        image_info.sampler = TextureObject_->GetTextureSampler();
 
-        descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptor_write.descriptorCount = 1;
+        std::array<VkWriteDescriptorSet, 2> descriptor_writes{};
 
-        descriptor_write.pBufferInfo = &buffer_info; //for descriptors that refer to buffer data
-        descriptor_write.pImageInfo = nullptr; //for descriptors that refer to image data
-        descriptor_write.pTexelBufferView = nullptr; //for descriptors that refer to buffer views
+        descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_writes[0].dstSet = DescriptorSets[i];
+        descriptor_writes[0].dstBinding = 0;
+        descriptor_writes[0].dstArrayElement = 0;
 
-        vkUpdateDescriptorSets(LogicalDevice_, 1, &descriptor_write, 0, nullptr);
+        descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptor_writes[0].descriptorCount = 1;
+
+        descriptor_writes[0].pBufferInfo = &buffer_info; //for descriptors that refer to buffer data
+        descriptor_writes[0].pImageInfo = nullptr; //for descriptors that refer to image data
+        descriptor_writes[0].pTexelBufferView = nullptr; //for descriptors that refer to buffer views
+
+        //for the texture sampler
+        descriptor_writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_writes[1].dstSet = DescriptorSets[i];
+        descriptor_writes[1].dstBinding = 1;
+        descriptor_writes[1].dstArrayElement = 0;    
+        descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_writes[1].descriptorCount = 1;
+        descriptor_writes[1].pImageInfo = &image_info;
+        descriptor_writes[1].pBufferInfo = nullptr;
+        descriptor_writes[1].pTexelBufferView = nullptr;
+
+        vkUpdateDescriptorSets(LogicalDevice_, 2, descriptor_writes.data(), 0, nullptr);
     }
 
     

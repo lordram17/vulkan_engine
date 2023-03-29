@@ -4,21 +4,24 @@
 #include <iostream>
 #include <cstring>
 
-#include "stb_image.h"
 #include "buffer_utils.h"
 
 class IVRTexObj {
 
 private:
 
-    char* TexturePath_;
+    const char* TexturePath_;
     VkDevice LogicalDevice_;
     VkPhysicalDevice PhysicalDevice_;
     uint32_t QueueFamilyIndex_;
     VkQueue Queue_;
+    VkImage TextureImage_;
+    VkDeviceMemory TextureImageMemory_;
+    VkImageView TextureImageView_;
+    VkSampler TextureSampler_;
 
 public:
-    IVRTexObj(VkDevice logical_device, VkPhysicalDevice physical_device, uint32_t queue_family_index, VkQueue queue, char* texture_path);
+    IVRTexObj(VkDevice logical_device, VkPhysicalDevice physical_device, uint32_t queue_family_index, VkQueue queue, const char* texture_path);
 
     void CreateTextureImage();    
 
@@ -26,12 +29,24 @@ public:
         VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memory_property_flags,
         VkImage& image, VkDeviceMemory& image_memory);
 
+    static VkImageView CreateVkImageView(VkDevice LogicalDevice_, VkImage image, VkFormat format);
+
+    void CreateTextureImageView();
+    VkImageView GetTextureImageView();
+
+    void CreateTextureSampler();
+    VkSampler GetTextureSampler();
+
     VkCommandPool CreateCommandPool();
     VkCommandBuffer BeginSingleTimeCommands(VkCommandPool command_pool);
     void EndSingleTimeCommands(VkCommandBuffer command_buffer, VkCommandPool command_pool);
 
     void CopyBuffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize buffer_size);
+    void CopyBufferToImage(VkBuffer src_buffer, VkImage image, uint32_t width, uint32_t height);
 
     void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout);
 
+    void CleanUp();
+
 };
+

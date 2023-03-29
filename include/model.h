@@ -11,6 +11,7 @@ struct Vertex {
     //vertex has 2 attributes
     glm::vec2 pos;
     glm::vec3 color;
+    glm::vec2 texCoord;
     
     //Vulkan needs 2 pieces of information to determine how to pass data from GPU memory
     // to the vertex shader
@@ -32,7 +33,7 @@ struct Vertex {
 
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescription ()
     {
-        std::vector<VkVertexInputAttributeDescription> attributeDescriptions(2);
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions(3);
 
         //the first attribute is position (corresponding to location=0 in the vertex shader)
         attributeDescriptions[0].binding = 0; //from which binding index does the per vertex data come?
@@ -45,6 +46,11 @@ struct Vertex {
         attributeDescriptions[1].location = 1;
         attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
         attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
 
         return attributeDescriptions;
     } 
@@ -74,10 +80,10 @@ public:
     VkBuffer IndexBuffer_;
 
     const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.8f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.8f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
     };
 
     const std::vector<uint16_t> indices = {

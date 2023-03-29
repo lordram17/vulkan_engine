@@ -204,6 +204,8 @@ void IVRSwapchainManager::CreateImageViews(VkDevice logical_device)
 
     for(size_t i = 0; i < SwapchainImageViews_.size(); i++)
     {
+        SwapchainImageViews_[i] = IVRTexObj::CreateVkImageView(logical_device, SwapchainImages_[i], SwapchainImageFormat_);
+         /*
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         createInfo.image = SwapchainImages_[i];
@@ -230,6 +232,7 @@ void IVRSwapchainManager::CreateImageViews(VkDevice logical_device)
         {
             throw std::runtime_error("Failed to create image view");
         }
+        */
     }
 }
 

@@ -8,6 +8,7 @@
 #include "swapchain_manager.h"
 #include "model.h"
 #include "uniform_buffer_manager.h"
+#include "texture.h"
 
 
 class IVRPipelineManager 
@@ -20,18 +21,19 @@ private:
     std::shared_ptr<IVRUBManager> UniformBufferManager_;
     VkRenderPass RenderPass_;
     VkPipeline Pipeline_;
-
+    std::shared_ptr<IVRTexObj> TextureObject_;
     
     VkDescriptorPool DescriptorPool_;
 
 public:
 
     IVRPipelineManager(VkDevice logical_device, std::shared_ptr<IVRSwapchainManager> swapchain_manager,
-        std::shared_ptr<IVRUBManager> uniform_buffer_manager)
+        std::shared_ptr<IVRUBManager> uniform_buffer_manager, std::shared_ptr<IVRTexObj> texture_object)
     {
         LogicalDevice_ = logical_device;
         SwapchainManager_ = swapchain_manager;
         UniformBufferManager_ = uniform_buffer_manager;
+        TextureObject_ = texture_object;
     }
 
     std::vector<VkDescriptorSet> DescriptorSets;

@@ -2,6 +2,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include "device_setup.h"
+#include "texture.h"
 
 //Swapchain is essentially a queue of images waiting to be presented to the screen
 
