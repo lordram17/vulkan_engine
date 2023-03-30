@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 #include <iostream>
 #include <cstring>
+
 #include "buffer_utils.h"
 
 
@@ -70,36 +71,24 @@ private:
     VkPhysicalDevice PhysicalDevice_;
     VkQueue Queue_;
     uint32_t QueueFamilyIndex_;
+    const char* ModelPath_;
 
 public:
     IVRModel(VkDevice logical_device, VkPhysicalDevice physical_device, 
-        VkQueue queue, uint32_t queue_family_index);
+        VkQueue queue, uint32_t queue_family_index, const char* model_path);
     ~IVRModel();
 
-    VkBuffer VertexBuffer_;
-    VkBuffer IndexBuffer_;
+    VkBuffer VertexBuffer;
+    VkBuffer IndexBuffer;
 
-    const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+    std::vector<Vertex> Vertices;
+    std::vector<uint32_t> Indices;
 
-        {{-0.5f, -0.5f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, 1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, 1.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-    };
-
-    const std::vector<uint16_t> indices = {
-        0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4
-    };
+    void LoadModel();
 
     void CreateVertexBuffer();
     void CreateIndexBuffer();
 
     uint32_t FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties);
-
     
 };

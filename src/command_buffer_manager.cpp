@@ -95,16 +95,16 @@ void IVRCBManager::RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t 
     scissor.extent = swapchain_manager->GetSwapchainExtent();
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-    VkBuffer vertex_buffers[] = {model->VertexBuffer_};
+    VkBuffer vertex_buffers[] = {model->VertexBuffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, offsets);
     
-    vkCmdBindIndexBuffer(command_buffer, model->IndexBuffer_ , 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(command_buffer, model->IndexBuffer , 0, VK_INDEX_TYPE_UINT32);
 
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
     PipelineManager_->GetPipelineLayout(), 0, 1, &PipelineManager_->DescriptorSets[image_index], 0, nullptr);
 
-    vkCmdDrawIndexed(CommandBuffer_, static_cast<uint32_t>(model->indices.size()), 1, 0, 0, 0);
+    vkCmdDrawIndexed(CommandBuffer_, static_cast<uint32_t>(model->Indices.size()), 1, 0, 0, 0);
 
     //vkCmdDraw(command_buffer, 3, 1, 0, 0);
     // vertexCount : number of vertices to draw

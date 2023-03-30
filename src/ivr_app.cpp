@@ -50,7 +50,7 @@ void IvrApp::initVulkan() {
     RenderPass_ = PipelineManager_->GetRenderPass();
     SwapchainManager_->CreateFramebuffers(RenderPass_, LogicalDevice_, depth_image->GetDepthImageView());
     
-    Model_ = std::make_shared<IVRModel>(LogicalDevice_, PhysicalDevice_, GraphicsQueue_, graphics_queue_family_index);
+    Model_ = std::make_shared<IVRModel>(LogicalDevice_, PhysicalDevice_, GraphicsQueue_, graphics_queue_family_index, "../3d_models/viking_room/viking_room.obj");
     Model_->CreateVertexBuffer();
     Model_->CreateIndexBuffer();
     

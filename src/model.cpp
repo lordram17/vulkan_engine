@@ -1,25 +1,80 @@
 #include "model.h"
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
 IVRModel::IVRModel(VkDevice logical_device, VkPhysicalDevice physical_device,
-    VkQueue queue, uint32_t queue_family_index) :
+    VkQueue queue, uint32_t queue_family_index, const char* model_path) :
     LogicalDevice_{logical_device} , PhysicalDevice_{physical_device},
-    Queue_{queue}, QueueFamilyIndex_{queue_family_index}
+    Queue_{queue}, QueueFamilyIndex_{queue_family_index}, ModelPath_{model_path}
 {
-    
+    LoadModel();
 }
 
 IVRModel::~IVRModel()
 {
-    vkDestroyBuffer(LogicalDevice_, VertexBuffer_, nullptr);
+    vkDestroyBuffer(LogicalDevice_, VertexBuffer, nullptr);
     vkFreeMemory(LogicalDevice_, VertexBufferMemory_, nullptr);
 
-    vkDestroyBuffer(LogicalDevice_, IndexBuffer_, nullptr);
+    vkDestroyBuffer(LogicalDevice_, IndexBuffer, nullptr);
     vkFreeMemory(LogicalDevice_, IndexBufferMemory_, nullptr);
+}
+
+void IVRModel::LoadModel()
+{
+    //an obj file consists of positions, normals, texture coordinates and faces
+    //faces consist of an arbitrary number of vertices, where each vertex refers to a position,
+    //   normal and texture coordinate
+
+    // tinyobj::attrib_t container holders positions, normals and texture coordinates in
+    //   attrib.vertices, attrib.normals and attrib.texcoords vectors respectively
+
+    //shape container contains all of the separate objects and their faces
+    //   each face consists of an array of vertices, and each vertex contains the indices of the position, normal and texture coordinate attributes
+    //  obj models can also define a material and texture per face, but we will be ignoring those
+
+    //err string contains errors and warn string contains warnings that ocurred while loading the file
+
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, ModelPath_)) {
+        throw std::runtime_error(warn + err);
+    }
+
+    for(const tinyobj::shape_t shape : shapes)
+    {
+        for(const tinyobj::index_t index : shape.mesh.indices)
+        {
+            Vertex vertex{};
+
+            //need to use the index to query the actual vertices and texture coordinates
+            vertex.pos = {
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            };
+
+            vertex.texCoord = {
+                attrib.texcoords[2 * index.texcoord_index + 0],
+                attrib.texcoords[2 * index.texcoord_index + 1]
+            };
+
+            vertex.color = {1.0f, 1.0f, 1.0f};
+
+            Vertices.push_back(vertex);
+            Indices.push_back(Indices.size());
+
+            
+        }
+    }
 }
 
 void IVRModel::CreateVertexBuffer()
 {
-    VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
+    VkDeviceSize buffer_size = sizeof(Vertices[0]) * Vertices.size();
 
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memory;
@@ -34,7 +89,7 @@ void IVRModel::CreateVertexBuffer()
     //TRANSFER vertex data from host memory to staging buffer memory
     void* data;
     vkMapMemory(LogicalDevice_, staging_buffer_memory, 0, buffer_size, 0, &data);
-    memcpy(data, vertices.data(), (size_t)buffer_size);
+    memcpy(data, Vertices.data(), (size_t)buffer_size);
     vkUnmapMemory(LogicalDevice_, staging_buffer_memory);
 
     IVRBufferUtilities::Spawn(
@@ -42,12 +97,12 @@ void IVRModel::CreateVertexBuffer()
         buffer_size, 
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        VertexBuffer_, VertexBufferMemory_);
+        VertexBuffer, VertexBufferMemory_);
 
     IVRBufferUtilities::TransferBufferData(
         LogicalDevice_, PhysicalDevice_, 
         QueueFamilyIndex_, Queue_,
-        staging_buffer, VertexBuffer_, buffer_size);
+        staging_buffer, VertexBuffer, buffer_size);
     
     vkDestroyBuffer(LogicalDevice_, staging_buffer, nullptr);
     vkFreeMemory(LogicalDevice_, staging_buffer_memory, nullptr);
@@ -55,7 +110,7 @@ void IVRModel::CreateVertexBuffer()
 
 void IVRModel::CreateIndexBuffer()
 {
-    VkDeviceSize buffer_size = sizeof(indices[0]) * indices.size();
+    VkDeviceSize buffer_size = sizeof(Indices[0]) * Indices.size();
 
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memory;
@@ -68,18 +123,18 @@ void IVRModel::CreateIndexBuffer()
     
     void* data;
     vkMapMemory(LogicalDevice_, staging_buffer_memory, 0, buffer_size, 0, &data);
-    memcpy(data, indices.data(), (size_t)buffer_size);
+    memcpy(data, Indices.data(), (size_t)buffer_size);
     vkUnmapMemory(LogicalDevice_, staging_buffer_memory);
 
     IVRBufferUtilities::Spawn(LogicalDevice_, PhysicalDevice_,
         buffer_size, 
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-        IndexBuffer_, IndexBufferMemory_);
+        IndexBuffer, IndexBufferMemory_);
     
     IVRBufferUtilities::TransferBufferData(
         LogicalDevice_, PhysicalDevice_, QueueFamilyIndex_, Queue_,
-        staging_buffer, IndexBuffer_, buffer_size);
+        staging_buffer, IndexBuffer, buffer_size);
     
     vkDestroyBuffer(LogicalDevice_, staging_buffer, VK_NULL_HANDLE);
     vkFreeMemory(LogicalDevice_, staging_buffer_memory, VK_NULL_HANDLE);
