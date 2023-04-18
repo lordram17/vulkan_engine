@@ -1,0 +1,53 @@
+Goals:
+1. Render a skybox using cubemapping
+2. Shadow mapping
+3. Raytracing using fragment shader
+4. Multiple scenes
+
+First goal is to render a skybox using cubemapping
+To achieve this I need:
+1. Support for multiple shaders while rendering the same scene
+2. To render multiple shaders, also need multiple graphic pipelines. This means I need to abstract away pipeline creation
+3. Also need to create different descriptor sets and layouts for multiple pipelines
+4. Load multiple images for the same descriptor set
+
+
+Lets first take a look at the current state of IVRApp and what needs to change
+
+There are so many things involved, it is a bit overwheling to figure out from where to start.
+Let me lay out all of the pieces here:
+
+1. Physical, Logical Device, surface and queue (These are going to remain unchanged through the lifetime of the app)
+2. Swapchain: (Not sure if this will remain unchanged or not)
+    - Images
+    - Imageviews
+    - Framebuffers
+3. Graphics pipeline: (this will definitely change depending on the vertex and fragment shader I want)
+    - pipeline
+    - descriptors sets (involves uniform buffers and images) and layout
+    - pipeline layout which takes in descriptor set layout
+    - renderpass (should this be a different item on this list altogether?)
+        - in the current implementation the renderpass is a part of the graphic pipeline
+        - perhaps the first thing to do is to change this part of the implementation and make the renderpass independent
+        - the question then is : do I need a separate renderpass for the skybox or not
+        - subpass
+            - attachment descriptions (color and depth)
+            - attachment references
+            - subpass dependency
+4. Uniform buffer
+    - multiple buffers created (one for each frame)
+    - void pointers to memory mapped to uniform buffer memory (multiple pointers because there are multiple buffers)
+5. Model (vertex buffer and index buffer)
+    - creates vertex and index buffers 
+    - requires single time command buffer (memory transfer operation)
+6. Textures
+    - uses single time command buffers
+    - many static functions which are also reused for depth images (this can be moved to a more neutral place in the code)
+    - image
+    - imageview
+    - sampler
+7. Depth images
+    - uses static function from texobj
+    - 
+8. Command buffer
+9. Submit to queue

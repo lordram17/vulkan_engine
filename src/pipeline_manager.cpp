@@ -304,22 +304,22 @@ void IVRPipelineManager::CreateRenderPass()
 
     //format of the color attachment should match the swapchain
     //no multisampling hence samples = 1
-    VkAttachmentDescription color_attachment{};
-    color_attachment.format = SwapchainManager_->GetSwapchainImageFormat();
-    color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    VkAttachmentDescription color_attachment_description{};
+    color_attachment_description.format = SwapchainManager_->GetSwapchainImageFormat();
+    color_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
     
     //loadOp and storeOp determine what to do with the data in the attachment before rendering and after rendering
     // - loadOp : LOAD (preserve existing values), CLEAR (clear values to a constant), DONT_CARE (dont care)
-    // - storeOp : STORE (rendered contents will be stored in memory and can be read later), DONE CARE (contents of framebuffer underfined after rendering operation)
+    // - storeOp : STORE (rendered contents will be stored in memory and can be read later), DONT CARE (contents of framebuffer undefined after rendering operation)
     // loadOp and storeOp apply to color and depth data (stencilLoadOp/stencilStoreOp apply to stencil data)
-    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    color_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    color_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
     //Textures and framebuffers in Vulkan are represented by VkImage objects with certain pixel format
     // However, the layout of the pixels in memory can change based on what you're trying to do with the image
     // Layout can specify to use image as color attachment, present images to the swapchain, used as destination for memory transfer operation
-    color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; //dont care what the previous layout of the image was
-    color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; //we want image to be ready for presentation using swapchain after rendering
+    color_attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; //dont care what the previous layout of the image was
+    color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; //we want image to be ready for presentation using swapchain after rendering
 
 
     //Subpasses
@@ -333,15 +333,15 @@ void IVRPipelineManager::CreateRenderPass()
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; //describes the layout for this attachment during this subpass
 
 
-    VkAttachmentDescription depth_attachment{};
-    depth_attachment.format = DepthImage_->FindDepthFormat();
-    depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    VkAttachmentDescription depth_attachment_description{};
+    depth_attachment_description.format = DepthImage_->FindDepthFormat();
+    depth_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+    depth_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depth_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depth_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depth_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depth_attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depth_attachment_description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     VkAttachmentReference depth_attachment_ref{};
     depth_attachment_ref.attachment = 1;
@@ -383,13 +383,13 @@ void IVRPipelineManager::CreateRenderPass()
     //renderpassinfo.dependencyCount = 1;
     //renderpassinfo.pDependencies = &dependency;
 
-    std::array<VkAttachmentDescription, 2> attachments = {color_attachment, depth_attachment};
+    std::array<VkAttachmentDescription, 2> attachment_descriptions = {color_attachment_description, depth_attachment_description};
 
     //Finally, create the render pass
     VkRenderPassCreateInfo render_pass_info{};
     render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     render_pass_info.attachmentCount = 2;
-    render_pass_info.pAttachments = attachments.data(); //attachment description array
+    render_pass_info.pAttachments = attachment_descriptions.data(); //attachment description array
     render_pass_info.subpassCount = 1;
     render_pass_info.pSubpasses = &subpass;
     render_pass_info.dependencyCount = 1;
