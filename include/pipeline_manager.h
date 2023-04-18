@@ -10,6 +10,7 @@
 #include "uniform_buffer_manager.h"
 #include "texture.h"
 #include "depth_image.h"
+#include "ivr_path.h"
 
 
 class IVRPipelineManager 

@@ -7,6 +7,7 @@
 #include "buffer_utils.h"
 #include "depth_image.h"
 
+
 class IVRTexObj {
 
 private:

@@ -2,8 +2,11 @@
 
 VkPipeline IVRPipelineManager::CreateGraphicsPipeline()
 {
-    std::vector<char> vert_shader_code = SimpleFileReader::ReadFile("../shaders/vert.spv");
-    std::vector<char> frag_shader_code = SimpleFileReader::ReadFile("../shaders/frag.spv");
+    std::string vert_shader_path = IVRPath::GetCrossPlatformPath({ "shaders", "vert.spv" });
+    std::string frag_shader_path = IVRPath::GetCrossPlatformPath({ "shaders", "frag.spv" });
+
+    std::vector<char> vert_shader_code = SimpleFileReader::ReadFile(vert_shader_path.c_str());
+    std::vector<char> frag_shader_code = SimpleFileReader::ReadFile(frag_shader_path.c_str());
 
     VkShaderModule vert_shader_module = CreateShaderModule(vert_shader_code);
     VkShaderModule frag_shader_module = CreateShaderModule(frag_shader_code);

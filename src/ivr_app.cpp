@@ -19,7 +19,12 @@ void IvrApp::initWindow()
 
 void IvrApp::initVulkan() {
 
-    IVRInstanceCreator instance_creator(true);
+    //paths
+    std::string statue_texture_path = IVRPath::GetCrossPlatformPath({ "texture_files", "statue.jpg"});
+    std::string viking_room_model_path = IVRPath::GetCrossPlatformPath({ "3d_models", "viking_room", "viking_room.obj" });
+
+
+    IVRInstanceCreator instance_creator(false);
     Instance_ = instance_creator.CreateVulkanInstance();
 
     createSurface();
@@ -40,7 +45,7 @@ void IvrApp::initVulkan() {
     UniformBufferManager_->CreateUniformBuffers();
 
     std::shared_ptr<IVRTexObj> sample_texture = std::make_shared<IVRTexObj>(LogicalDevice_, PhysicalDevice_, 
-                                                                        graphics_queue_family_index, GraphicsQueue_, "../texture_files/statue.jpg");
+                                                                        graphics_queue_family_index, GraphicsQueue_, statue_texture_path.c_str());
     std::shared_ptr<IVRDepthImage> depth_image = std::make_shared<IVRDepthImage>(LogicalDevice_, PhysicalDevice_, 
                                                                         graphics_queue_family_index, GraphicsQueue_, 
                                                                         SwapchainManager_->GetSwapchainExtent());
@@ -50,7 +55,7 @@ void IvrApp::initVulkan() {
     RenderPass_ = PipelineManager_->GetRenderPass();
     SwapchainManager_->CreateFramebuffers(RenderPass_, LogicalDevice_, depth_image->GetDepthImageView());
     
-    Model_ = std::make_shared<IVRModel>(LogicalDevice_, PhysicalDevice_, GraphicsQueue_, graphics_queue_family_index, "../3d_models/viking_room/viking_room.obj");
+    Model_ = std::make_shared<IVRModel>(LogicalDevice_, PhysicalDevice_, GraphicsQueue_, graphics_queue_family_index, viking_room_model_path.c_str());
     Model_->CreateVertexBuffer();
     Model_->CreateIndexBuffer();
     

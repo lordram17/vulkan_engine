@@ -16,8 +16,9 @@ Queue_{queue}
 
 void IVRTexObj::CreateTextureImage()
 {
+    
     int tex_width, tex_height, tex_channels;
-    stbi_uc* pixels = stbi_load(TexturePath_, &tex_width, 
+    stbi_uc* pixels = stbi_load(TexturePath_, &tex_width,
         &tex_height, &tex_channels, STBI_rgb_alpha);
     //STBI_rgb_alpha forces the image to be loaded with an alpha channel (this is for consistency between image formats)
 
