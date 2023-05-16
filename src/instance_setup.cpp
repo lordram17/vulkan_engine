@@ -3,37 +3,44 @@
 #include <algorithm>
 #include <vector>
 
-IVRInstanceCreator::IVRInstanceCreator(bool isEnableValidationLayers)
+IVRInstanceManager::IVRInstanceManager()
 {
-    EnableValidationLayers_ = isEnableValidationLayers;
 }
 
-IVRInstanceCreator::~IVRInstanceCreator()
+IVRInstanceManager::~IVRInstanceManager()
 {
     //vkDestroyInstance(Instance_, nullptr);
 }
 
-VkInstance IVRInstanceCreator::CreateVulkanInstance()
+void IVRInstanceManager::SetAppName(std::string app_name)
+{
+    AppName_ = app_name;
+}
+
+void IVRInstanceManager::EnableValidationLayersForInstanceCreation()
+{
+    EnableValidationLayers_ = true;
+}
+
+VkInstance IVRInstanceManager::CreateVulkanInstance()
 {
     if(EnableValidationLayers_ && !CheckValidationLayerSupport())
     {
         throw std::runtime_error("validation layers requested but not available!");
     }
 
-    
+    VkApplicationInfo app_info{};
 
-    VkApplicationInfo appInfo;
-
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "IVR";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "No Engine";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pApplicationName = AppName_.c_str();
+    app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.pEngineName = "No Engine";
+    app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.apiVersion = VK_API_VERSION_1_0;
 
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
+    createInfo.pApplicationInfo = &app_info;
 
     //Vulkan needs extensions to interface with the GLFW window system.
     //GLFW has a built in function that returns the two parameters Vulkan needs:
@@ -64,7 +71,7 @@ VkInstance IVRInstanceCreator::CreateVulkanInstance()
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 
     //print the extensions
-    for(VkExtensionProperties extension : extensions)
+    for(VkExtensionProperties& extension : extensions)
     {
         std::cout << extension.extensionName << std::endl;
     }
@@ -79,7 +86,7 @@ VkInstance IVRInstanceCreator::CreateVulkanInstance()
     return Instance_;
 }
 
-bool IVRInstanceCreator::CheckValidationLayerSupport()
+bool IVRInstanceManager::CheckValidationLayerSupport()
 {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -115,7 +122,7 @@ bool IVRInstanceCreator::CheckValidationLayerSupport()
     return false;
 }
 
-VkInstance IVRInstanceCreator::GetInstance()
+VkInstance IVRInstanceManager::GetInstance()
 {
     return Instance_;
 }

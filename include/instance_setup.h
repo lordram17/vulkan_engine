@@ -6,23 +6,24 @@
 #include <iostream>
 #include <cstring>
 
-class IVRInstanceCreator {
+class IVRInstanceManager {
 
 private:
 
+    std::string AppName_ = "IVR";
     VkInstance Instance_;
     bool EnableValidationLayers_ = true;
-
     const std::vector<const char*> ValidationLayers_ = {"VK_LAYER_KHRONOS_validation"
-                                                        , "VK_LAYER_LUNARG_standard_validation" 
-                                                        //,"VK_LAYER_LUNARG_api_dump"
+                                                        //,"VK_LAYER_LUNARG_api_dump"  
                                                         };
 
 public:
 
-    IVRInstanceCreator(bool isEnableValidationLayers);
-    ~IVRInstanceCreator();
+    IVRInstanceManager();
+    ~IVRInstanceManager();
 
+    void SetAppName(std::string app_name);
+    void EnableValidationLayersForInstanceCreation();
     VkInstance CreateVulkanInstance();    
     bool CheckValidationLayerSupport();
     VkInstance GetInstance();

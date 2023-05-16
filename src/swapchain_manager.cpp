@@ -29,6 +29,11 @@ SwapchainSupportDetails IVRSwapchainManager::QuerySwapchainSupport_(VkPhysicalDe
 }
 
 
+IVRSwapchainManager::IVRSwapchainManager(std::shared_ptr<IVRDeviceManager> device_manager, std::shared_ptr<IVRWindow> window) :
+    DeviceManager_(device_manager), Window_(window)
+{
+}
+
 bool IVRSwapchainManager::IsSwapchainAdequate(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
 {
     SwapchainSupportDetails swapchain_support_details = QuerySwapchainSupport_(physical_device, surface);
@@ -105,10 +110,9 @@ VkExtent2D IVRSwapchainManager::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR 
     return capabilities.currentExtent;
 }
 
-void IVRSwapchainManager::CreateSwapchain(VkDevice logical_device, VkPhysicalDevice physical_device, 
-    VkSurfaceKHR surface, QueueFamilyIndices queue_families)
+void IVRSwapchainManager::CreateSwapchain()
 {
-    SwapchainSupportDetails support_details = QuerySwapchainSupport_(physical_device, surface);
+    SwapchainSupportDetails support_details = QuerySwapchainSupport_(DeviceManager_->GetPhysicalDevice(), Window_->GetVulkanSurface());
 
     VkSurfaceFormatKHR surface_format = ChooseSwapSurfaceFormat(support_details.formats);
     VkPresentModeKHR present_mode = ChooseSwapPresentMode(support_details.presentModes);
@@ -126,7 +130,7 @@ void IVRSwapchainManager::CreateSwapchain(VkDevice logical_device, VkPhysicalDev
 
     VkSwapchainCreateInfoKHR createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = surface;
+    createInfo.surface = Window_->GetVulkanSurface();
     createInfo.minImageCount = image_count;
     createInfo.imageFormat = surface_format.format;
     createInfo.imageColorSpace = surface_format.colorSpace;
@@ -146,11 +150,11 @@ void IVRSwapchainManager::CreateSwapchain(VkDevice logical_device, VkPhysicalDev
     // them to share the images (this is just for ease of use right now)
     // If the graphics and present queue are the same then we can use the exclusive mode since only one queue family will
     // be using the images
-    if(queue_families.graphicsFamily != queue_families.presentFamily)
+    if(DeviceManager_->GetDeviceQueueFamilies().graphicsFamily != DeviceManager_->GetDeviceQueueFamilies().presentFamily)
     {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         createInfo.queueFamilyIndexCount = 2;
-        uint32_t queue_family_indices_array[] = {queue_families.graphicsFamily, queue_families.presentFamily};
+        uint32_t queue_family_indices_array[] = { DeviceManager_->GetDeviceQueueFamilies().graphicsFamily, DeviceManager_->GetDeviceQueueFamilies().presentFamily};
         createInfo.pQueueFamilyIndices = queue_family_indices_array;
     }   
     else 
@@ -177,77 +181,54 @@ void IVRSwapchainManager::CreateSwapchain(VkDevice logical_device, VkPhysicalDev
 
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(logical_device, &createInfo, nullptr, &Swapchain_) != VK_SUCCESS)
+    if (vkCreateSwapchainKHR(DeviceManager_->GetLogicalDevice(), &createInfo, nullptr, &Swapchain_) != VK_SUCCESS)
     {
-        throw std::runtime_error("Familed to create swapchain");
+        throw std::runtime_error("Failed to create swapchain");
     }
-
-    RetrieveSwapchainImages(logical_device);
 }
 
-void IVRSwapchainManager::DestroySwapchain(VkDevice logical_device)
+void IVRSwapchainManager::DestroySwapchain()
 {
-    vkDestroySwapchainKHR(logical_device, Swapchain_, nullptr);
+    vkDestroySwapchainKHR(DeviceManager_->GetLogicalDevice(), Swapchain_, nullptr);
 }
 
-void IVRSwapchainManager::RetrieveSwapchainImages(VkDevice logical_device)
+//load the swapchain images into the image views
+void IVRSwapchainManager::RetrieveSwapchainImages()
 {
     uint32_t image_count;
-    vkGetSwapchainImagesKHR(logical_device, Swapchain_, &image_count, nullptr);
+    vkGetSwapchainImagesKHR(DeviceManager_->GetLogicalDevice(), Swapchain_, &image_count, nullptr);
     SwapchainImages_.resize(image_count);
-    vkGetSwapchainImagesKHR(logical_device, Swapchain_, &image_count, SwapchainImages_.data());
+    vkGetSwapchainImagesKHR(DeviceManager_->GetLogicalDevice(), Swapchain_, &image_count, SwapchainImages_.data());
 }
 
-void IVRSwapchainManager::CreateImageViews(VkDevice logical_device)
+//for each swapchain image, create an image view
+void IVRSwapchainManager::CreateImageViews()
 {
     SwapchainImageViews_.resize(SwapchainImages_.size());
 
     for(size_t i = 0; i < SwapchainImageViews_.size(); i++)
     {
-        SwapchainImageViews_[i] = IVRTexObj::CreateVkImageView(logical_device, SwapchainImages_[i], 
-                                                                SwapchainImageFormat_, VK_IMAGE_ASPECT_COLOR_BIT);
-         /*
-        VkImageViewCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image = SwapchainImages_[i];
-
-        //viewtype specifies how the image data should be interpreted
-        //allows you to treat images as 1D, 2D, 3D textures and cubemaps
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = SwapchainImageFormat_;
-
-        //components field allows to swizzle the color channel around (swizzling = rearranging color channels)
-        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-        //subresourceRange specifies the image's purpose and which part of the image should be accessed
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1; //only 1 mipmap level
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1; //only 1 layer [more than 1 for stereographic 3D applications]
-
-        if(vkCreateImageView(logical_device, &createInfo, nullptr, &SwapchainImageViews_[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to create image view");
-        }
-        */
+        SwapchainImageViews_[i] = IVRImageUtils::CreateImageView(DeviceManager_->GetLogicalDevice(), SwapchainImages_[i],
+            																SwapchainImageFormat_, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
 
-void IVRSwapchainManager::DestroyImageViews(VkDevice logical_device)
+void IVRSwapchainManager::DestroyImageViews()
 {
     for(VkImageView& image_view : SwapchainImageViews_)
     {
-        vkDestroyImageView(logical_device, image_view, nullptr);
+        vkDestroyImageView(DeviceManager_->GetLogicalDevice(), image_view, nullptr);
     }
 }
 
 uint16_t IVRSwapchainManager::GetImageViewCount()
 {
     return (uint16_t) SwapchainImageViews_.size();
+}
+
+VkImageView IVRSwapchainManager::GetImageViewByIndex(uint16_t index)
+{
+    return SwapchainImageViews_[index];
 }
 
 VkFormat IVRSwapchainManager::GetSwapchainImageFormat()
@@ -265,7 +246,7 @@ VkSwapchainKHR IVRSwapchainManager::GetSwapchain()
     return Swapchain_;
 }
 
-void IVRSwapchainManager::CreateFramebuffers(VkRenderPass renderPass, VkDevice logical_device, VkImageView depth_image_view)
+void IVRSwapchainManager::CreateFramebuffers(VkRenderPass renderPass, VkImageView depth_image_view)
 {
     //The renderpass has been setup to expect a single framebuffer with the same format as the swapchain images
 
@@ -285,7 +266,7 @@ void IVRSwapchainManager::CreateFramebuffers(VkRenderPass renderPass, VkDevice l
         framebufferInfo.height = SwapchainExtent_.height;
         framebufferInfo.layers = 1;
 
-        if(vkCreateFramebuffer(logical_device, &framebufferInfo, nullptr, &SwapchainFramebuffers_[i]) != VK_SUCCESS)
+        if(vkCreateFramebuffer(DeviceManager_->GetLogicalDevice(), &framebufferInfo, nullptr, &SwapchainFramebuffers_[i]) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to create framebuffer!");
         }
@@ -293,11 +274,11 @@ void IVRSwapchainManager::CreateFramebuffers(VkRenderPass renderPass, VkDevice l
     }
 }
 
-void IVRSwapchainManager::DestroyFramebuffers(VkDevice logical_device)
+void IVRSwapchainManager::DestroyFramebuffers()
 {
     for(VkFramebuffer framebuffer : SwapchainFramebuffers_)
     {
-        vkDestroyFramebuffer(logical_device, framebuffer, nullptr);
+        vkDestroyFramebuffer(DeviceManager_->GetLogicalDevice(), framebuffer, nullptr);
     }
 }
 

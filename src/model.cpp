@@ -3,21 +3,22 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-IVRModel::IVRModel(VkDevice logical_device, VkPhysicalDevice physical_device,
-    VkQueue queue, uint32_t queue_family_index, const char* model_path) :
-    LogicalDevice_{logical_device} , PhysicalDevice_{physical_device},
-    Queue_{queue}, QueueFamilyIndex_{queue_family_index}, ModelPath_{model_path}
+IVRModel::IVRModel(std::shared_ptr<IVRDeviceManager> device_manager, std::string model_name) :
+    DeviceManager_{ device_manager }
 {
+    ModelPath_ = IVRPath::GetCrossPlatformPath({ "3d_models", model_name});
     LoadModel();
+    CreateVertexBuffer();
+    CreateIndexBuffer();
 }
 
 IVRModel::~IVRModel()
 {
-    vkDestroyBuffer(LogicalDevice_, VertexBuffer, nullptr);
-    vkFreeMemory(LogicalDevice_, VertexBufferMemory_, nullptr);
+    vkDestroyBuffer(DeviceManager_->GetLogicalDevice(), VertexBuffer_, nullptr);
+    vkFreeMemory(DeviceManager_->GetLogicalDevice(), VertexBufferMemory_, nullptr);
 
-    vkDestroyBuffer(LogicalDevice_, IndexBuffer, nullptr);
-    vkFreeMemory(LogicalDevice_, IndexBufferMemory_, nullptr);
+    vkDestroyBuffer(DeviceManager_->GetLogicalDevice(), IndexBuffer_, nullptr);
+    vkFreeMemory(DeviceManager_->GetLogicalDevice(), IndexBufferMemory_, nullptr);
 }
 
 void IVRModel::LoadModel()
@@ -40,7 +41,9 @@ void IVRModel::LoadModel()
     std::vector<tinyobj::material_t> materials;
     std::string warn, err;
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, ModelPath_)) {
+    std::cout << "Opening model : " << ModelPath_ << "\n";
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, ModelPath_.c_str())) {
         throw std::runtime_error(warn + err);
     }
 
@@ -65,9 +68,7 @@ void IVRModel::LoadModel()
             vertex.color = {1.0f, 1.0f, 1.0f};
 
             Vertices.push_back(vertex);
-            Indices.push_back(Indices.size());
-
-            
+            Indices.push_back(Indices.size()); 
         }
     }
 }
@@ -80,7 +81,7 @@ void IVRModel::CreateVertexBuffer()
     VkDeviceMemory staging_buffer_memory;
 
     IVRBufferUtilities::Spawn(
-        LogicalDevice_, PhysicalDevice_,
+        DeviceManager_->GetLogicalDevice(), DeviceManager_->GetPhysicalDevice(),
         buffer_size, 
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT, //buffer can be used as source in memory transfer operation
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -88,24 +89,24 @@ void IVRModel::CreateVertexBuffer()
 
     //TRANSFER vertex data from host memory to staging buffer memory
     void* data;
-    vkMapMemory(LogicalDevice_, staging_buffer_memory, 0, buffer_size, 0, &data);
+    vkMapMemory(DeviceManager_->GetLogicalDevice(), staging_buffer_memory, 0, buffer_size, 0, &data);
     memcpy(data, Vertices.data(), (size_t)buffer_size);
-    vkUnmapMemory(LogicalDevice_, staging_buffer_memory);
+    vkUnmapMemory(DeviceManager_->GetLogicalDevice(), staging_buffer_memory);
 
     IVRBufferUtilities::Spawn(
-        LogicalDevice_, PhysicalDevice_,
+        DeviceManager_->GetLogicalDevice(), DeviceManager_->GetPhysicalDevice(),
         buffer_size, 
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        VertexBuffer, VertexBufferMemory_);
+        VertexBuffer_, VertexBufferMemory_);
 
     IVRBufferUtilities::TransferBufferData(
-        LogicalDevice_, PhysicalDevice_, 
-        QueueFamilyIndex_, Queue_,
-        staging_buffer, VertexBuffer, buffer_size);
+        DeviceManager_->GetLogicalDevice(), DeviceManager_->GetPhysicalDevice(),
+        DeviceManager_->GetDeviceQueueFamilies().graphicsFamily, DeviceManager_->GetGraphicsQueue(),
+        staging_buffer, VertexBuffer_, buffer_size);
     
-    vkDestroyBuffer(LogicalDevice_, staging_buffer, nullptr);
-    vkFreeMemory(LogicalDevice_, staging_buffer_memory, nullptr);
+    vkDestroyBuffer(DeviceManager_->GetLogicalDevice(), staging_buffer, nullptr);
+    vkFreeMemory(DeviceManager_->GetLogicalDevice(), staging_buffer_memory, nullptr);
 }
 
 void IVRModel::CreateIndexBuffer()
@@ -115,29 +116,29 @@ void IVRModel::CreateIndexBuffer()
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memory;
 
-    IVRBufferUtilities::Spawn(LogicalDevice_, PhysicalDevice_,
+    IVRBufferUtilities::Spawn(DeviceManager_->GetLogicalDevice(), DeviceManager_->GetPhysicalDevice(),
         buffer_size, 
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         staging_buffer, staging_buffer_memory);
     
     void* data;
-    vkMapMemory(LogicalDevice_, staging_buffer_memory, 0, buffer_size, 0, &data);
+    vkMapMemory(DeviceManager_->GetLogicalDevice(), staging_buffer_memory, 0, buffer_size, 0, &data);
     memcpy(data, Indices.data(), (size_t)buffer_size);
-    vkUnmapMemory(LogicalDevice_, staging_buffer_memory);
+    vkUnmapMemory(DeviceManager_->GetLogicalDevice(), staging_buffer_memory);
 
-    IVRBufferUtilities::Spawn(LogicalDevice_, PhysicalDevice_,
+    IVRBufferUtilities::Spawn(DeviceManager_->GetLogicalDevice(), DeviceManager_->GetPhysicalDevice(),
         buffer_size, 
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-        IndexBuffer, IndexBufferMemory_);
+        IndexBuffer_, IndexBufferMemory_);
     
     IVRBufferUtilities::TransferBufferData(
-        LogicalDevice_, PhysicalDevice_, QueueFamilyIndex_, Queue_,
-        staging_buffer, IndexBuffer, buffer_size);
+        DeviceManager_->GetLogicalDevice(), DeviceManager_->GetPhysicalDevice(), DeviceManager_->GetDeviceQueueFamilies().graphicsFamily, DeviceManager_->GetGraphicsQueue(),
+        staging_buffer, IndexBuffer_, buffer_size);
     
-    vkDestroyBuffer(LogicalDevice_, staging_buffer, VK_NULL_HANDLE);
-    vkFreeMemory(LogicalDevice_, staging_buffer_memory, VK_NULL_HANDLE);
+    vkDestroyBuffer(DeviceManager_->GetLogicalDevice(), staging_buffer, VK_NULL_HANDLE);
+    vkFreeMemory(DeviceManager_->GetLogicalDevice(), staging_buffer_memory, VK_NULL_HANDLE);
 
 }
 
@@ -148,7 +149,7 @@ uint32_t IVRModel::FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags pr
     //we need to find the right type of memory to use
 
     VkPhysicalDeviceMemoryProperties memory_properties;
-    vkGetPhysicalDeviceMemoryProperties(PhysicalDevice_, &memory_properties);
+    vkGetPhysicalDeviceMemoryProperties(DeviceManager_->GetPhysicalDevice(), &memory_properties);
 
     //memory_properties has two arrays : memoryTypes and memoryHeaps
     // memoryHeaps are distinct memory resources like dedicated VRAM and swap space in RAM (if VRAM runs out)
@@ -165,4 +166,34 @@ uint32_t IVRModel::FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags pr
     }
 
     return 0;
+}
+
+IVRTransform IVRModel::GetTransform()
+{
+    return Transform_;
+}
+
+void IVRModel::SetPosition(glm::vec3 position)
+{
+	Transform_.Position = position;
+}
+
+void IVRModel::SetRotation(glm::vec3 rotation)
+{
+	Transform_.Rotation = rotation;
+}
+
+void IVRModel::SetScale(glm::vec3 scale)
+{
+	Transform_.Scale = scale;
+}
+
+VkBuffer IVRModel::GetVertexBuffer()
+{
+	return VertexBuffer_;
+}
+
+VkBuffer IVRModel::GetIndexBuffer()
+{
+	return IndexBuffer_;
 }

@@ -6,6 +6,9 @@
 #include <cstring>
 
 #include "buffer_utils.h"
+#include "device_setup.h"
+#include "geometry_structs.h"
+#include "ivr_path.h"
 
 
 struct Vertex {
@@ -67,19 +70,16 @@ private:
     uint32_t VertexCount_;
     VkDeviceMemory IndexBufferMemory_;
 
-    VkDevice LogicalDevice_;
-    VkPhysicalDevice PhysicalDevice_;
-    VkQueue Queue_;
-    uint32_t QueueFamilyIndex_;
-    const char* ModelPath_;
+    std::shared_ptr<IVRDeviceManager> DeviceManager_;
+    std::string ModelPath_;
+
+    IVRTransform Transform_;
+    VkBuffer VertexBuffer_;
+    VkBuffer IndexBuffer_;
 
 public:
-    IVRModel(VkDevice logical_device, VkPhysicalDevice physical_device, 
-        VkQueue queue, uint32_t queue_family_index, const char* model_path);
+    IVRModel(std::shared_ptr<IVRDeviceManager> device_manager, std::string model_name);
     ~IVRModel();
-
-    VkBuffer VertexBuffer;
-    VkBuffer IndexBuffer;
 
     std::vector<Vertex> Vertices;
     std::vector<uint32_t> Indices;
@@ -89,6 +89,16 @@ public:
     void CreateVertexBuffer();
     void CreateIndexBuffer();
 
+    //not used anywhere. what is the purpose of this?
     uint32_t FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties);
+
+    IVRTransform GetTransform();
+    void SetPosition(glm::vec3 position);
+    void SetRotation(glm::vec3 rotation);
+    void SetScale(glm::vec3 scale);
+
+    VkBuffer GetVertexBuffer();
+    VkBuffer GetIndexBuffer();
     
+
 };

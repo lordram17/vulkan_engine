@@ -24,7 +24,7 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
  * @brief respoinsible for creating the logical and physical devices
  * 
  */
-class IVRDeviceCreator {
+class IVRDeviceManager {
 
 private:
     const std::vector<const char*> DeviceExtensions_ = {
@@ -45,11 +45,14 @@ private:
     bool CheckDeviceExtensionSupport_(VkPhysicalDevice physical_device);
 
 public:
-    IVRDeviceCreator();
-    ~IVRDeviceCreator();
+    IVRDeviceManager();
+    ~IVRDeviceManager();
 
-    VkPhysicalDevice PickPhysicalDevice(VkSurfaceKHR surface, VkInstance instance);
-    VkDevice CreateLogicalDevice(VkSurfaceKHR surface);
+    void PickPhysicalDevice(VkSurfaceKHR surface, VkInstance instance);
+    void CreateLogicalDevice(VkSurfaceKHR surface);
+
+    VkDevice GetLogicalDevice();
+    VkPhysicalDevice GetPhysicalDevice();
 
     VkQueue GetGraphicsQueue();
     VkQueue GetPresentQueue();

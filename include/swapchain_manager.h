@@ -2,8 +2,10 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <array>
-#include "device_setup.h"
 
+#include "image_utils.h"
+#include "device_setup.h"
+#include "ivr_window.h"
 #include "texture.h"
 
 //Swapchain is essentially a queue of images waiting to be presented to the screen
@@ -33,38 +35,38 @@ private:
     VkExtent2D SwapchainExtent_;
     std::vector<VkFramebuffer> SwapchainFramebuffers_;
 
+    std::shared_ptr<IVRDeviceManager> DeviceManager_;
+    std::shared_ptr<IVRWindow> Window_;
+
 public:
 
-    IVRSwapchainManager(){};
+    IVRSwapchainManager(std::shared_ptr<IVRDeviceManager> device_manager, std::shared_ptr<IVRWindow> window);
     ~IVRSwapchainManager(){};
 
     bool IsSwapchainAdequate(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
 
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats);
     VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes);
-
     VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-    void CreateSwapchain(VkDevice logical_device, VkPhysicalDevice physical_device, 
-                        VkSurfaceKHR surface, QueueFamilyIndices queue_families);
-    
-    void DestroySwapchain(VkDevice logical_device);
-
-    void RetrieveSwapchainImages(VkDevice logical_device);
+    void CreateSwapchain();
+    void DestroySwapchain();
+    void RetrieveSwapchainImages();
 
     //To use VkImage in the render pipeline (as render targets), we need to create a VkImageView object
     //Image view is a view into the image. it describes how to access the image and which part of the image to access
     // should it be treated as a 2D depth texture without any mipmapping levels
-    void CreateImageViews(VkDevice logical_device);
-    void DestroyImageViews(VkDevice logical_device);
+    void CreateImageViews();
+    void DestroyImageViews();
     uint16_t GetImageViewCount();
+    VkImageView GetImageViewByIndex(uint16_t index);
 
     VkFormat GetSwapchainImageFormat();
     VkExtent2D GetSwapchainExtent();
     VkSwapchainKHR GetSwapchain();
 
-    void CreateFramebuffers(VkRenderPass renderPass, VkDevice logical_device, VkImageView depth_image_view);
-    void DestroyFramebuffers(VkDevice logical_device);
+    void CreateFramebuffers(VkRenderPass renderPass, VkImageView depth_image_view);
+    void DestroyFramebuffers();
     VkFramebuffer GetFramebuffer(uint32_t image_index);
 
 };

@@ -2,6 +2,8 @@
 #include <vulkan/vulkan.h>
 #include <iostream>
 
+#include "singlecommand_utils.h"
+
 class IVRBufferUtilities {
 public:
     static void Spawn(
@@ -72,56 +74,18 @@ public:
     }
 
     static void TransferBufferData(VkDevice logical_device, VkPhysicalDevice physical_device, uint32_t queue_family_index,
-    VkQueue queue, VkBuffer& src_buffer, VkBuffer& dst_buffer, VkDeviceSize buffer_size)
+                                    VkQueue queue, VkBuffer& src_buffer, VkBuffer& dst_buffer, VkDeviceSize buffer_size)
     {
-        //can create a separate command pool for this kind of short lived buffer operation
-        VkCommandPoolCreateInfo pool_info{};
-        pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-        pool_info.queueFamilyIndex = queue_family_index;
-
-        VkCommandPool command_pool;
-
-        if(vkCreateCommandPool(logical_device, &pool_info, nullptr, &command_pool) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create command pool for transfer buffer!");
-        }
-
-        //transfer memory from one buffer to another locally on the GPU
-        //memory transfer operations are executed using command buffers
-
-        VkCommandBufferAllocateInfo alloc_info{};
-        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        alloc_info.commandPool = command_pool;
-        alloc_info.commandBufferCount = 1;
-
-        VkCommandBuffer command_buffer;
-        vkAllocateCommandBuffers(logical_device, &alloc_info, &command_buffer);
-
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; //we are only going to submit the command buffer once
-        //this will also wait from returning the function until the copy operation is done
-        vkBeginCommandBuffer(command_buffer, &begin_info);
+        VkCommandPool command_pool = IVRSingleCommandUtil::CreateCommandPool(logical_device, queue_family_index);
+        VkCommandBuffer command_buffer = IVRSingleCommandUtil::BeginSingleTimeCommands(logical_device, command_pool);
 
         VkBufferCopy copy_region{};
         copy_region.srcOffset = 0;
         copy_region.dstOffset = 0;
         copy_region.size = buffer_size;
         vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
-        vkEndCommandBuffer(command_buffer);
 
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer;
-
-        vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-        vkQueueWaitIdle(queue);
-
-        vkFreeCommandBuffers(logical_device, command_pool, 1, &command_buffer);
-        vkDestroyCommandPool(logical_device, command_pool, VK_NULL_HANDLE);
+        IVRSingleCommandUtil::SubmitAndEndSingleTimeCommands(logical_device, queue, command_buffer, command_pool);
     }   
 
 };

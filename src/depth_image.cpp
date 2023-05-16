@@ -1,9 +1,7 @@
 #include "depth_image.h"
 
-IVRDepthImage::IVRDepthImage(VkDevice logical_device, VkPhysicalDevice physical_device, 
-                            uint32_t queue_family_index, VkQueue queue, VkExtent2D depth_image_extent) :
-LogicalDevice_{logical_device}, PhysicalDevice_{physical_device}, QueueFamilyIndex_{queue_family_index}, Queue_{queue},
-DepthImageExtent_{depth_image_extent}
+IVRDepthImage::IVRDepthImage(std::shared_ptr<IVRDeviceManager> device_manager, VkExtent2D depth_image_extent) :
+     DeviceManager_{device_manager}, DepthImageExtent_{ depth_image_extent }
 {
     CreateDepthResources();
 }
@@ -20,15 +18,15 @@ void IVRDepthImage::CreateDepthResources()
 
     VkFormat depth_format = FindDepthFormat();
 
-    IVRTexObj::CreateVkImage(
-        LogicalDevice_, PhysicalDevice_, DepthImageExtent_.width, DepthImageExtent_.height, depth_format,
+    IVRImageUtils::CreateVkImageAndBindMemory(
+        DeviceManager_->GetLogicalDevice(), DeviceManager_->GetPhysicalDevice(), DepthImageExtent_.width, DepthImageExtent_.height, depth_format,
         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         DepthImage_, DepthImageMemory_);
     
-    DepthImageView_ = IVRTexObj::CreateVkImageView(LogicalDevice_, DepthImage_, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT);
+    DepthImageView_ = IVRImageUtils::CreateImageView(DeviceManager_->GetLogicalDevice(), DepthImage_, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT);
     
-    IVRTexObj::TransitionImageLayout(
-        LogicalDevice_, QueueFamilyIndex_, Queue_,
+    IVRImageUtils::TransitionImageLayout(
+        DeviceManager_->GetLogicalDevice(), DeviceManager_->GetDeviceQueueFamilies().graphicsFamily, DeviceManager_->GetGraphicsQueue(),
         DepthImage_, depth_format, 
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
@@ -41,7 +39,7 @@ VkFormat IVRDepthImage::FindSupportedFormat(const std::vector<VkFormat> &candida
     {
         VkFormatProperties format_properties;
         
-        vkGetPhysicalDeviceFormatProperties(PhysicalDevice_, format, &format_properties);
+        vkGetPhysicalDeviceFormatProperties(DeviceManager_->GetPhysicalDevice(), format, &format_properties);
 
         if(tiling == VK_IMAGE_TILING_LINEAR && (format_properties.linearTilingFeatures & features) == features)
         {
@@ -70,7 +68,4 @@ VkImageView IVRDepthImage::GetDepthImageView()
     return DepthImageView_;
 }
 
-bool IVRDepthImage::HasStencilComponent(VkFormat format)
-{
-    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-}
+

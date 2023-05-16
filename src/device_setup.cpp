@@ -40,7 +40,7 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
     return indices;
 }
 
-bool IVRDeviceCreator::IsDeviceSuitable_(VkPhysicalDevice device, VkSurfaceKHR surface)
+bool IVRDeviceManager::IsDeviceSuitable_(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
     VkPhysicalDeviceProperties device_properties; //basic device properties like name, type and supported vulkan version
     vkGetPhysicalDeviceProperties(device, &device_properties);
@@ -57,7 +57,7 @@ bool IVRDeviceCreator::IsDeviceSuitable_(VkPhysicalDevice device, VkSurfaceKHR s
     return indices.isComplete() && extensions_supported && device_features.samplerAnisotropy;
 }
 
-bool IVRDeviceCreator::CheckDeviceExtensionSupport_(VkPhysicalDevice physical_device)
+bool IVRDeviceManager::CheckDeviceExtensionSupport_(VkPhysicalDevice physical_device)
 {
     uint32_t extension_count = 0;
     vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, nullptr);
@@ -79,16 +79,16 @@ bool IVRDeviceCreator::CheckDeviceExtensionSupport_(VkPhysicalDevice physical_de
     return required_extensions.empty();
 }
 
-IVRDeviceCreator::IVRDeviceCreator()
+IVRDeviceManager::IVRDeviceManager()
 {
 }
 
-IVRDeviceCreator::~IVRDeviceCreator()
+IVRDeviceManager::~IVRDeviceManager()
 {
     //vkDestroyDevice(LogicalDevice_, nullptr);
 }
 
-VkPhysicalDevice IVRDeviceCreator::PickPhysicalDevice(VkSurfaceKHR surface, VkInstance instance)
+void IVRDeviceManager::PickPhysicalDevice(VkSurfaceKHR surface, VkInstance instance)
 {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -116,13 +116,11 @@ VkPhysicalDevice IVRDeviceCreator::PickPhysicalDevice(VkSurfaceKHR surface, VkIn
     }
 
     PickedPhysicalDeviceQueueFamilyIndices_ = FindQueueFamilies(PhysicalDevice_, surface);
-
-    return PhysicalDevice_;
 }
 
 
 
-VkDevice IVRDeviceCreator::CreateLogicalDevice(VkSurfaceKHR surface)
+void IVRDeviceManager::CreateLogicalDevice(VkSurfaceKHR surface)
 {
     QueueFamilyIndices indices = PickedPhysicalDeviceQueueFamilyIndices_;
 
@@ -169,21 +167,29 @@ VkDevice IVRDeviceCreator::CreateLogicalDevice(VkSurfaceKHR surface)
 
     vkGetDeviceQueue(LogicalDevice_, indices.graphicsFamily, 0, &GraphicsQueue_); 
     vkGetDeviceQueue(LogicalDevice_, indices.presentFamily, 0, &PresentQueue_);
+}
 
+VkDevice IVRDeviceManager::GetLogicalDevice()
+{
     return LogicalDevice_;
 }
 
-VkQueue IVRDeviceCreator::GetGraphicsQueue()
+VkPhysicalDevice IVRDeviceManager::GetPhysicalDevice()
+{
+    return PhysicalDevice_;
+}
+
+VkQueue IVRDeviceManager::GetGraphicsQueue()
 {
     return GraphicsQueue_;
 }
 
-VkQueue IVRDeviceCreator::GetPresentQueue()
+VkQueue IVRDeviceManager::GetPresentQueue()
 {
     return PresentQueue_;
 }
 
-QueueFamilyIndices IVRDeviceCreator::GetDeviceQueueFamilies()
+QueueFamilyIndices IVRDeviceManager::GetDeviceQueueFamilies()
 {
     return PickedPhysicalDeviceQueueFamilyIndices_;
 }

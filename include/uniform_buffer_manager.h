@@ -2,30 +2,39 @@
 #include <vulkan/vulkan.h>
 #include <iostream>
 #include <vector>
-#include "camera.h"
+#include <stdexcept>
+
+
 #include "buffer_utils.h"
+#include "device_setup.h"
 
 class IVRUBManager {
 private:
-    VkDevice LogicalDevice_;
-    VkPhysicalDevice PhysicalDevice_;
+    VkDeviceSize BufferSize_;
 
-    VkDeviceMemory UniformBufferMemory_;
-    VkBuffer UniformBuffer_;
-    
+    std::shared_ptr<IVRDeviceManager> DeviceManager_;
+
+    void CreateUniformBuffer();
+    void DestroyUniformBuffer();
 
 public:
-    IVRUBManager(VkDevice logical_device, VkPhysicalDevice physical_device, uint16_t frames_in_flight);
+
+    //disable copy constructor and assignment operator
+    IVRUBManager(const IVRUBManager&) = delete;
+
+    IVRUBManager(std::shared_ptr<IVRDeviceManager> device_manager, VkDeviceSize buffer_size);
+    ~IVRUBManager();
 
     //Need to have multiple buffers because frames may be in flight at the same time and
     //we dont want to update the buffer in preparation of the next frame while a previous one is still reading from it
     //Thus we need to have as many buffers as we have frames in flight, and write to a uniform buffer that is not currently being read by the GPU
-    std::vector<VkBuffer> UniformBuffers;
-    std::vector<VkDeviceMemory> UniformBuffersMemory;
-    std::vector<void*> UniformBuffersMapped;
-    uint16_t FramesInFlight_; 
+    VkBuffer UniformBuffer;
+    VkDeviceMemory UniformBuffersMemory;
+    void* UniformBuffersMapped;
 
-    void CreateUniformBuffers();
-    void DestroyUniformBuffers();
+    //call this function to write to the uniform buffer
+    void WriteToUniformBuffer(void* source_memory, VkDeviceSize source_object_size);
 
+    VkDeviceSize GetBufferSize();
+    VkBuffer GetBuffer();
 };

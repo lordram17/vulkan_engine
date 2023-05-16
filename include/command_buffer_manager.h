@@ -6,6 +6,7 @@
 #include "device_setup.h"
 #include "swapchain_manager.h"
 #include "model.h"
+#include "debug_logger_utils.h"
 
 class IVRCBManager
 {
@@ -13,22 +14,23 @@ private:
 
     VkCommandPool CommandPool_;
     VkCommandBuffer CommandBuffer_;
-    
-    std::shared_ptr<IVRPipelineManager> PipelineManager_;
+
+    std::shared_ptr<IVRDeviceManager> DeviceManager_;
 
 public:
 
-    IVRCBManager(std::shared_ptr<IVRPipelineManager> pipeline_manager) :
-    PipelineManager_{pipeline_manager}
-    {
-    }
+    IVRCBManager(std::shared_ptr<IVRDeviceManager> device_manager);
 
-    void CreateCommandPool(VkPhysicalDevice physical_device, VkSurfaceKHR surface, VkDevice logical_device);
-    void DestroyCommandPool(VkDevice logical_device);
+    void CreateCommandPool();
+    void DestroyCommandPool();
+    void CreateCommandBuffer();
 
-    VkCommandBuffer CreateCommandBuffer(VkDevice logical_device);
-    void RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index, 
-                            VkRenderPass renderpass, std::shared_ptr<IVRSwapchainManager> swapchain_manager,
-                            VkPipeline graphics_pipeline, std::shared_ptr<IVRModel> model);
+    //void RecordCommandBuffer(VkCommandBuffer command_buffer, uint32_t image_index, 
+    //                        VkRenderPass renderpass, std::shared_ptr<IVRSwapchainManager> swapchain_manager,
+    //                        VkPipeline graphics_pipeline, std::shared_ptr<IVRModel> model);
 
+    void StartCommandBuffer();
+    void EndCommandBuffer();
+
+    VkCommandBuffer GetCommandBuffer() { return CommandBuffer_; }
 };

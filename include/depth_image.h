@@ -5,6 +5,8 @@
 #include <stdexcept>
 
 #include "texture.h"
+#include "image_utils.h"
+#include "device_setup.h"
 
 
 class IVRDepthImage{
@@ -13,17 +15,12 @@ private:
     VkImage DepthImage_;
     VkDeviceMemory DepthImageMemory_;
     VkImageView DepthImageView_;
-
-    VkDevice LogicalDevice_;
-    VkPhysicalDevice PhysicalDevice_;
     VkExtent2D DepthImageExtent_;
-    uint32_t QueueFamilyIndex_;
-    VkQueue Queue_;
+    std::shared_ptr<IVRDeviceManager> DeviceManager_;
 
 public:
 
-    IVRDepthImage(VkDevice logical_device, VkPhysicalDevice physical_device, uint32_t queue_family_index, VkQueue queue,
-                 VkExtent2D depth_image_extent);
+    IVRDepthImage(std::shared_ptr<IVRDeviceManager> device_manager, VkExtent2D depth_image_extent);
 
     void CreateDepthResources();
 
@@ -33,7 +30,5 @@ public:
     VkFormat FindDepthFormat();
 
     VkImageView GetDepthImageView();
-
-    static bool HasStencilComponent(VkFormat format);
 
 };
