@@ -30,6 +30,8 @@ private:
 	std::shared_ptr<IVRSyncObjectsManager> SyncObjectsManager_;
 	std::shared_ptr<IVRCBManager> CBManager_;
 
+	uint32_t CurrentSwapchainImageIndex_;
+
 public:
 	IVREngine();
 	~IVREngine() {};
@@ -46,4 +48,7 @@ public:
 	std::shared_ptr<IVRDeviceManager> GetDeviceManager() { return DeviceManager_; }
 	std::shared_ptr<IVRWindow> GetWindow() { return Window_; }
 	void SetWorld(std::shared_ptr<IVRWorld> world) { World_ = world; }
+
+	uint32_t QueryForSwapchainIndex();
+	std::shared_ptr<IVRSwapchainManager> GetSwapchainManager() { return SwapchainManager_; }
 };

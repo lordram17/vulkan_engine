@@ -96,7 +96,7 @@ struct IVRFixedFunctionPipelineConfig {
 		Rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		Rasterizer.lineWidth = 1.0f;
 		Rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-		Rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		Rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		Rasterizer.depthBiasEnable = VK_FALSE;
 		Rasterizer.depthBiasConstantFactor = 0.0f;
 		Rasterizer.depthBiasClamp = 0.0f;
@@ -115,7 +115,7 @@ struct IVRFixedFunctionPipelineConfig {
 		DepthStencil.pNext = nullptr;
 		DepthStencil.depthTestEnable = VK_TRUE;
 		DepthStencil.depthWriteEnable = VK_TRUE;
-		DepthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+		DepthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 		DepthStencil.depthBoundsTestEnable = VK_FALSE;
 		DepthStencil.minDepthBounds = 0.0f;
 		DepthStencil.maxDepthBounds = 1.0f;

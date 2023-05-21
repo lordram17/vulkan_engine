@@ -24,7 +24,7 @@ void IVRWindow::InitWindow()
 	
 	Window_ = glfwCreateWindow(Width_, Height_, "Vulkan", nullptr, nullptr);
 
-	glfwSetInputMode(Window_, GLFW_CURSOR, GLFW_CURSOR_HIDDEN); //disable cursor. This is for camera movement
+	glfwSetInputMode(Window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED); //disable cursor. This is for camera movement
 }
 
 void IVRWindow::CreateWindowSurface(VkInstance instance)

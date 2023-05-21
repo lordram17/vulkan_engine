@@ -1,7 +1,7 @@
 #include "world.h"
 
-IVRWorld::IVRWorld(std::shared_ptr<IVRDeviceManager> device_manager) :
-	DeviceManager_(device_manager)
+IVRWorld::IVRWorld(std::shared_ptr<IVRDeviceManager> device_manager, uint32_t swapchain_image_count) :
+	DeviceManager_(device_manager), SwapchainImageCount_(swapchain_image_count)
 {
 }
 
@@ -19,13 +19,13 @@ void IVRWorld::Init()
 }
 
 //runs every frame
-void IVRWorld::Update(float dt)
+void IVRWorld::Update(float dt, uint32_t swapchain_index)
 {
 	Camera_->MoveCamera(dt);
 
 	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
 	{
-		render_object->UpdateMVPMatrixUB();
+		render_object->UpdateMVPMatrixUB(swapchain_index);
 	}
 }
 
@@ -40,15 +40,40 @@ void IVRWorld::LoadRenderObjectsVector()
 {
 	IVR_LOG_INFO("Creating render objects...");
 
+	IVR_LOG_INFO("Creating mvp matric uniform buffers for all render objects...");
+	std::vector<std::shared_ptr<IVRUBManager>> mvp_matrix_ubs;
+	for (uint32_t i = 0; i < SwapchainImageCount_; i++)
+	{
+		mvp_matrix_ubs.push_back(std::make_shared<IVRUBManager>(DeviceManager_, sizeof(MVPUniformBufferObject)));
+	}
+
+	IVR_LOG_INFO("	- Creating viking room...");
 	//logic for creating render objects and adding them to the vector
 	std::shared_ptr<IVRModel> model = std::make_shared<IVRModel>(DeviceManager_, "viking_room/viking_room.obj");
-	model->SetPosition(glm::vec3(1.0f, 0.0f, 2.0f));
+	model->SetPosition(glm::vec3(0.0f, 0.0f, 2.0f));
 	std::vector<std::string> textures_names = { "viking_room.png" };
-	std::shared_ptr<IVRUBManager> mvp_matrix_ub = std::make_shared<IVRUBManager>(DeviceManager_, sizeof(MVPUniformBufferObject));
-	std::shared_ptr<IVRMaterial> material = std::make_shared<IVRMaterial>(DeviceManager_, mvp_matrix_ub, "vert.spv", "frag.spv", textures_names);
-	std::shared_ptr<IVRRenderObject> render_object = std::make_shared<IVRRenderObject>(model, material, Camera_);
-	render_object->UpdateMVPMatrixUB();
+	MaterialProperties material_properties;
+	std::shared_ptr<IVRMaterial> material = std::make_shared<IVRMaterial>(DeviceManager_, "simple_texture_mapped.vert.spv", "simple_texture_mapped.frag.spv", textures_names, material_properties, SwapchainImageCount_);
+	std::shared_ptr<IVRRenderObject> render_object = std::make_shared<IVRRenderObject>(model, material, Camera_, SwapchainImageCount_);
 	RenderObjects_.push_back(render_object);
+
+	IVR_LOG_INFO("	- Creating cubemap...");
+	model = std::make_shared<IVRModel>(DeviceManager_, "simple_cube.obj");
+	model->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+	textures_names = { "koln_wallraffplatz"}; //for cubemap, only folder name is needed
+	material_properties.IsCubemap = true;
+	material = std::make_shared<IVRMaterial>(DeviceManager_, "cubemap.vert.spv", "cubemap.frag.spv", textures_names, material_properties, SwapchainImageCount_);
+	render_object = std::make_shared<IVRRenderObject>(model, material, Camera_, SwapchainImageCount_);
+	RenderObjects_.push_back(render_object);
+
+	for (uint32_t i = 0; i < SwapchainImageCount_; i++)
+	{
+		for (std::shared_ptr<IVRRenderObject> ro : RenderObjects_)
+		{
+			ro->GetMaterial()->SetMVPMatrixUB(mvp_matrix_ubs[i]);
+			ro->UpdateMVPMatrixUB(i);
+		}
+	}
 }
 
 void IVRWorld::SetupCamera()
@@ -103,13 +128,18 @@ void IVRWorld::CreateDescriptorSets()
 
 	std::vector<VkDescriptorPoolSize> pool_sizes = CountPoolSizes();
 
-	DescriptorManager_->CreateDescriptorPool(pool_sizes, RenderObjects_.size()); //*IMP* Note : this is incorrect because the same material can be used by multiple render objects. 
-																					//So the pool size should be calculated by looping over materials and not render objects
+	DescriptorManager_->CreateDescriptorPool(pool_sizes, RenderObjects_.size() * SwapchainImageCount_); 
+	//*IMP* Note : this is incorrect because the same material can be used by multiple render objects. 
+	//So the pool size should be calculated by looping over materials and not render objects
+	
 	//create descriptor set for each material
 	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
 	{
-		VkDescriptorSet descriptor_set = DescriptorManager_->CreateDescriptorSet(render_object->GetMaterial()->GetDescriptorSetLayout());
-		render_object->GetMaterial()->AssignDescriptorSet(descriptor_set);
+		for (uint32_t i = 0; i < SwapchainImageCount_; i++) 
+		{
+			VkDescriptorSet descriptor_set = DescriptorManager_->CreateDescriptorSet(render_object->GetMaterial()->GetDescriptorSetLayout());
+			render_object->GetMaterial()->AssignDescriptorSet(descriptor_set);
+		}
 	}
 }
 
@@ -119,7 +149,10 @@ void IVRWorld::WriteDescriptorSets()
 	//for each render object
 	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
 	{
-		render_object->GetMaterial()->WriteToDescriptorSet();
+		for (uint32_t i = 0; i < SwapchainImageCount_; i++)
+		{
+			render_object->GetMaterial()->WriteToDescriptorSet(i);
+		}
 	}
 }
 

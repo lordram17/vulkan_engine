@@ -15,7 +15,14 @@ glm::mat4 IVRCamera::GetViewMatrix()
 glm::mat4 IVRCamera::GetProjectionMatrix()
 {
     glm::mat4 projection_matrix = glm::perspective(glm::radians(FieldOfView), AspectRatio, NearPlane, FarPlane);
+    projection_matrix[1][1] *= -1; //flip the y axis
     return projection_matrix;
+}
+
+IVRCamera::IVRCamera()
+{
+	IVR_LOG_INFO("IVRCamera constructor called");
+    IVR_LOG_INFO("Yaw: " + std::to_string(Yaw));
 }
 
 void IVRCamera::SetPosition(glm::vec3 position)
@@ -25,27 +32,35 @@ void IVRCamera::SetPosition(glm::vec3 position)
 
 void IVRCamera::MoveCamera(float dt)
 {
+    int XOffset = IVRMouseStatus::MouseX_ - PreviousMouseX;
+    int YOffset = IVRMouseStatus::MouseY_ - PreviousMouseY;
+    PreviousMouseX = IVRMouseStatus::MouseX_;
+    PreviousMouseY = IVRMouseStatus::MouseY_;
+
     //direction calculation
-    float delta_horizontal_angle = CameraTurnSpeed * dt * IVRMouseStatus::MouseX_;
-    float delta_vertical_angle = CameraTurnSpeed * dt * IVRMouseStatus::MouseY_;
+    float yaw_offset = CameraTurnSpeed * dt * XOffset;
+    float pitch_offset = CameraTurnSpeed * dt * YOffset;
 
-    IVR_LOG_INFO(IVRMouseStatus::MouseX_);
+    Yaw += yaw_offset;
+    Pitch -= pitch_offset;
 
-    HorizontalAngle += delta_horizontal_angle;
-    VerticalAngle -= delta_vertical_angle;
+    if(Pitch > 89.0f) Pitch = 89.0f;
+    if(Pitch < -89.0f) Pitch = -89.0f;
 
     CameraDirection_ = glm::vec3(
-		cos(VerticalAngle) * sin(HorizontalAngle),
-		sin(VerticalAngle),
-		cos(VerticalAngle) * cos(HorizontalAngle)
+		cos(glm::radians(Pitch)) * cos(glm::radians(Yaw)),
+		sin(glm::radians(Pitch)),
+		cos(glm::radians(Pitch)) * sin(glm::radians(Yaw))
 	);
+    glm::normalize(CameraDirection_);
 
-    CameraRight_ = glm::vec3(
-        sin(HorizontalAngle - 3.14f / 2.0f),
-        0,
-        cos(HorizontalAngle - 3.14f / 2.0f)
-    );
+    //CameraRight_ = glm::vec3(
+    //    sin(Yaw - 3.14f / 2.0f),
+    //    0,
+    //    cos(Yaw - 3.14f / 2.0f)
+    //);
 
+    CameraRight_ = glm::cross(CameraDirection_, WorldUp_);
     CameraUp_ = glm::cross(CameraRight_, CameraDirection_);
 
     if (IVRKeyStatus::GetKeyStatus(IVRKey::A) || IVRKeyStatus::GetKeyStatus(IVRKey::LEFT)) CameraPosition_ -= CameraRight_ * CameraMoveSpeed * dt;

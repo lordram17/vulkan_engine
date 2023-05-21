@@ -2,6 +2,7 @@
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
+#include "glm/gtx/string_cast.hpp"
 
 enum IVRDebugLevel {
 	Success,

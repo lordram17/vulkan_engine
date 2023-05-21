@@ -9,31 +9,28 @@ class IVRImageUtils {
 
 public:
 
-	static VkImageView CreateImageView(VkDevice logical_device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
+	static void CreateImageView(VkDevice logical_device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageViewType view_type, uint32_t layer_count, VkImageView& image_view)
 	{
 		VkImageViewCreateInfo view_create_info = {};
 		view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		view_create_info.image = image;
-		view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D; // 2D texture
+		view_create_info.viewType = view_type; // 2D texture or cubemap
 		view_create_info.format = format;
 		view_create_info.subresourceRange.aspectMask = aspectFlags; // what kind of data will be stored in the image
 		view_create_info.subresourceRange.baseMipLevel = 0; // start at base level
 		view_create_info.subresourceRange.levelCount = 1; // only one level
 		view_create_info.subresourceRange.baseArrayLayer = 0; // start at base layer
-		view_create_info.subresourceRange.layerCount = 1; // only one layer
+		view_create_info.subresourceRange.layerCount = layer_count; // only one layer
 
 		//can add swizzle here to swizzle the image components
 
-		VkImageView imageView;
-		if (vkCreateImageView(logical_device, &view_create_info, nullptr, &imageView) != VK_SUCCESS)
+		if (vkCreateImageView(logical_device, &view_create_info, nullptr, &image_view) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create texture image view!");
 		}
-
-		return imageView;
 	}
 
-	static void CopyBufferToImage(VkDevice logical_device, uint32_t queue_family_index, VkQueue queue, VkBuffer src_buffer, VkImage image, uint32_t width, uint32_t height)
+	static void CopyBufferToImage(VkDevice logical_device, uint32_t queue_family_index, VkQueue queue, uint32_t layer_count, VkBuffer src_buffer, VkImage image, uint32_t width, uint32_t height)
 	{
 		VkCommandPool command_pool = IVRSingleCommandUtil::CreateCommandPool(logical_device, queue_family_index);
 		VkCommandBuffer command_buffer = IVRSingleCommandUtil::BeginSingleTimeCommands(logical_device, command_pool);
@@ -46,7 +43,7 @@ public:
 		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		region.imageSubresource.mipLevel = 0;
 		region.imageSubresource.baseArrayLayer = 0;
-		region.imageSubresource.layerCount = 1;
+        region.imageSubresource.layerCount = layer_count;
 
 		region.imageOffset = { 0,0,0 };
 		region.imageExtent = { width, height, 1 };
@@ -57,7 +54,7 @@ public:
 	}
 
 	static void TransitionImageLayout(VkDevice logical_device, uint32_t queue_family_index, VkQueue queue,
-		VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout)
+		VkImage image, VkFormat format, uint32_t layer_count, VkImageLayout old_layout, VkImageLayout new_layout)
 	{
         VkCommandPool command_pool = IVRSingleCommandUtil::CreateCommandPool(logical_device, queue_family_index);
         VkCommandBuffer command_buffer = IVRSingleCommandUtil::BeginSingleTimeCommands(logical_device, command_pool);
@@ -80,7 +77,7 @@ public:
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.layerCount = layer_count;
 
         if (new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
         {
@@ -153,9 +150,9 @@ public:
         IVRSingleCommandUtil::SubmitAndEndSingleTimeCommands(logical_device, queue, command_buffer, command_pool);
 	}
 
-    static void CreateVkImageAndBindMemory(VkDevice logical_device, VkPhysicalDevice physical_device,
-        uint32_t width, uint32_t height, VkFormat format,
-        VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memory_property_flags,
+    static void CreateImageAndBindMemory(VkDevice logical_device, VkPhysicalDevice physical_device,
+        uint32_t width, uint32_t height, VkFormat format, uint32_t array_layers,
+        VkImageTiling tiling, VkImageCreateFlags image_create_flags, VkImageUsageFlags usage, VkMemoryPropertyFlags memory_property_flags,
         VkImage& image, VkDeviceMemory& image_memory)
     {
         VkImageCreateInfo image_info{};
@@ -165,7 +162,7 @@ public:
         image_info.extent.height = height;
         image_info.extent.depth = 1;
         image_info.mipLevels = 1;
-        image_info.arrayLayers = 1;
+        image_info.arrayLayers = array_layers;
 
         image_info.format = format; //need to use the same format for texels as the pixels in the buffer
         image_info.tiling = tiling; //texels are laid out in an implementation defined order for optimal access from the shader
@@ -182,7 +179,7 @@ public:
         image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; //image will be used by a single queue family
 
         image_info.samples = VK_SAMPLE_COUNT_1_BIT; //related to multisampling, only relevant for images that will be used as attachments
-        image_info.flags = 0; //some optional flags for images that will be used as sparse images
+        image_info.flags = image_create_flags; //some optional flags for images that will be used as sparse images
 
         if (vkCreateImage(logical_device, &image_info, nullptr, &image) != VK_SUCCESS)
         {

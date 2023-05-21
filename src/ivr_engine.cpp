@@ -97,11 +97,12 @@ void IVREngine::CreatePipelines()
 	{
 		std::shared_ptr<IVRMaterial> material = render_object->GetMaterial();
 		IVRFixedFunctionPipelineConfig pipeline_config(SwapchainManager_->GetSwapchainExtent());
+		material->UpdatePipelineConfigBasedOnMaterialProperties(pipeline_config);
 
 		VkPipelineLayout pipeline_layout = PipelineCreator_->CreatePipelineLayout(material->GetDescriptorSetLayout());
-
 		VkPipeline pipeline = PipelineCreator_->CreatePipeline(Renderpass_->GetRenderpass(), pipeline_config,
 			pipeline_layout, material->GetVertexShaderPath(), material->GetFragmentShaderPath());
+
 		material->SetPipeline(pipeline);
 		material->SetPipelineLayout(pipeline_layout);
 	}
@@ -110,18 +111,10 @@ void IVREngine::CreatePipelines()
 
 void IVREngine::DrawFrame()
 {
-	//get next image from swapchain
-	vkWaitForFences(DeviceManager_->GetLogicalDevice(), 1, &SyncObjectsManager_->InFlightFence, VK_TRUE, UINT64_MAX);
-	vkResetFences(DeviceManager_->GetLogicalDevice(), 1, &SyncObjectsManager_->InFlightFence);
-
-	uint32_t image_index;
-	vkAcquireNextImageKHR(DeviceManager_->GetLogicalDevice(), SwapchainManager_->GetSwapchain(), UINT64_MAX,
-				SyncObjectsManager_->ImageAvailableSemaphore, VK_NULL_HANDLE, &image_index);
-	
 	vkResetCommandBuffer(CBManager_->GetCommandBuffer(), 0);
 	
 	CBManager_->StartCommandBuffer();
-	Renderpass_->BeginRenderPass(CBManager_->GetCommandBuffer(), FramebufferManager_->GetFramebuffer(image_index), SwapchainManager_->GetSwapchainExtent());
+	Renderpass_->BeginRenderPass(CBManager_->GetCommandBuffer(), FramebufferManager_->GetFramebuffer(CurrentSwapchainImageIndex_), SwapchainManager_->GetSwapchainExtent());
 
 	VkViewport viewport{};
 	viewport.x = 0.0f;
@@ -150,7 +143,7 @@ void IVREngine::DrawFrame()
 		vkCmdBindVertexBuffers(CBManager_->GetCommandBuffer(), 0, 1, vertex_buffers, offsets);
 		vkCmdBindIndexBuffer(CBManager_->GetCommandBuffer(), render_object->GetModel()->GetIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		
-		VkDescriptorSet descriptor_sets[] = { material->GetDescriptorSet() };
+		VkDescriptorSet descriptor_sets[] = { material->GetDescriptorSet(CurrentSwapchainImageIndex_) };
 		vkCmdBindDescriptorSets(CBManager_->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material->GetPipelineLayout(), 0, 1, descriptor_sets, 0, nullptr);
 		
 		vkCmdDrawIndexed(CBManager_->GetCommandBuffer(), render_object->GetModel()->Indices.size(), 1, 0, 0, 0);
@@ -193,11 +186,22 @@ void IVREngine::DrawFrame()
 	VkSwapchainKHR swapchains[] = { SwapchainManager_->GetSwapchain() };
 	present_info.swapchainCount = 1;
 	present_info.pSwapchains = swapchains;
-	present_info.pImageIndices = &image_index;
+	present_info.pImageIndices = &CurrentSwapchainImageIndex_;
 	present_info.pResults = nullptr;
 
 	vkQueuePresentKHR(DeviceManager_->GetPresentQueue(), &present_info);
+}
 
+uint32_t IVREngine::QueryForSwapchainIndex()
+{
+	//get next image from swapchain
+	vkWaitForFences(DeviceManager_->GetLogicalDevice(), 1, &SyncObjectsManager_->InFlightFence, VK_TRUE, UINT64_MAX);
+	vkResetFences(DeviceManager_->GetLogicalDevice(), 1, &SyncObjectsManager_->InFlightFence);
+
+	vkAcquireNextImageKHR(DeviceManager_->GetLogicalDevice(), SwapchainManager_->GetSwapchain(), UINT64_MAX,
+		SyncObjectsManager_->ImageAvailableSemaphore, VK_NULL_HANDLE, &CurrentSwapchainImageIndex_);
+	
+	return CurrentSwapchainImageIndex_;
 }
 
 

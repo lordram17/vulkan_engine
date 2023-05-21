@@ -52,10 +52,10 @@ void IVRInputManager::CheckForMouseInputs()
 	glfwGetCursorPos(Window_->GetGLFWWindow(), &x, &y);
 	int width, height;
 	glfwGetWindowSize(Window_->GetGLFWWindow(), &width, &height);
-	IVRMouseStatus::MouseX_ = width/2 - (int)x;
-	IVRMouseStatus::MouseY_ = height/2 - (int)y;
+	IVRMouseStatus::MouseX_ =  (int)x;
+	IVRMouseStatus::MouseY_ =  (int)y;
 
-	glfwSetCursorPos(Window_->GetGLFWWindow(), width / 2, height / 2);
+	//glfwSetCursorPos(Window_->GetGLFWWindow(), width / 2, height / 2);
 }
 
 void IVRInputManager::CheckForKeyboardInputs()

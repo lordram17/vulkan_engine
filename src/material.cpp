@@ -1,18 +1,38 @@
 #include "material.h"
 
 IVRMaterial::IVRMaterial(std::shared_ptr<IVRDeviceManager> device_manager, 
-	std::shared_ptr<IVRUBManager> mvp_matrix_ub,
 	std::string vertex_shader_name, std::string fragment_shader_name, 
-	std::vector<std::string> texture_names) :
-	DeviceManager_(device_manager), MVPMatrixUB_(mvp_matrix_ub)
+	std::vector<std::string> texture_names, MaterialProperties properties, uint32_t swapchain_image_count) :
+	DeviceManager_(device_manager), 
+	MaterialProperties_(properties), SwapchainImageCount_(swapchain_image_count)
 {
 	VertexShaderPath_ = IVRPath::GetCrossPlatformPath({"shaders", vertex_shader_name });
 	FragmentShaderPath_ = IVRPath::GetCrossPlatformPath({ "shaders", fragment_shader_name });
 
 	for (std::string texture_name : texture_names)
 	{
-		std::string texture_path = IVRPath::GetCrossPlatformPath({ "texture_files", texture_name });
-		std::shared_ptr<IVRTexObj> texture_object = std::make_shared<IVRTexObj>(DeviceManager_, texture_path);
+		std::shared_ptr<IVRTexture> texture_object;
+
+		if (MaterialProperties_.IsCubemap)
+		{
+			if (TextureNames_.size() > 1) {
+				IVR_LOG_ERROR("Loading more than one cubemap is not supported yet");
+			}
+
+			IVR_LOG_INFO("Loading cubemap: " + texture_name);
+
+			std::string texture_path = IVRPath::GetCrossPlatformPath({ "texture_files/cubemaps", texture_name });
+			texture_object = std::make_shared<IVRTextureCube>(DeviceManager_, texture_path);
+			Textures_.push_back(texture_object);
+		}
+		else {
+
+			IVR_LOG_INFO("Loading 2D texture: " + texture_name);
+
+			std::string texture_path = IVRPath::GetCrossPlatformPath({ "texture_files", texture_name });
+			texture_object = std::make_shared<IVRTexture2D>(DeviceManager_, texture_path);
+		}
+
 		Textures_.push_back(texture_object);
 	}
 
@@ -36,7 +56,7 @@ void IVRMaterial::CreateDescriptorSetLayoutInfo()
 	uint32_t binding_count = 1; //the mvp matrix uniform buffer is always at binding 0, so we start at 1 for the next bindings
 
 	//assign the texture samplers to the next bindings
-	for (std::shared_ptr<IVRTexObj> texture_object : Textures_)
+	for (std::shared_ptr<IVRTexture> texture_object : Textures_)
 	{
 		VkDescriptorSetLayoutBinding texture_binding{};
 		texture_binding.binding = binding_count;
@@ -63,13 +83,17 @@ std::vector<VkDescriptorPoolSize> IVRMaterial::GetDescriptorPoolSize()
 	VkDescriptorPoolSize mvp_matrix_pool_size{};
 	mvp_matrix_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	mvp_matrix_pool_size.descriptorCount = 1;
-	descriptor_pool_size.push_back(mvp_matrix_pool_size);
+	
 	
 	//the texture samplers may be more than one dependending on the number of textures
 	VkDescriptorPoolSize texture_pool_size{};
 	texture_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	texture_pool_size.descriptorCount = Textures_.size();
-	descriptor_pool_size.push_back(texture_pool_size);
+	
+	for(uint32_t i = 0; i < SwapchainImageCount_; i++){
+		descriptor_pool_size.push_back(mvp_matrix_pool_size);
+		descriptor_pool_size.push_back(texture_pool_size);
+	}
 
 	return descriptor_pool_size;
 }
@@ -86,27 +110,33 @@ VkDescriptorSetLayout IVRMaterial::GetDescriptorSetLayout()
 
 void IVRMaterial::AssignDescriptorSet(VkDescriptorSet descriptor_set)
 {
-	DescriptorSet_ = descriptor_set;
+	DescriptorSets_.push_back(descriptor_set);
+
+	if (DescriptorSets_.size() > SwapchainImageCount_)
+	{
+		IVR_LOG_ERROR("The number of descriptor sets is greater than the number of swapchain images");
+		throw std::runtime_error("The number of descriptor sets is greater than the number of swapchain images");
+	}
 }
 
-VkDescriptorSet IVRMaterial::GetDescriptorSet()
+VkDescriptorSet IVRMaterial::GetDescriptorSet(uint32_t swapchain_image_index)
 {
-	return DescriptorSet_;
+	return DescriptorSets_[swapchain_image_index];
 }
 
-void IVRMaterial::WriteToDescriptorSet()
+void IVRMaterial::WriteToDescriptorSet(uint32_t swapchain_image_index)
 {
 	std::vector<VkWriteDescriptorSet> descriptor_writes;
 
 	//write the mvp matrix uniform buffer to the descriptor set
 	VkDescriptorBufferInfo mvp_matrix_buffer_info{};
-	mvp_matrix_buffer_info.buffer = MVPMatrixUB_->GetBuffer();
+	mvp_matrix_buffer_info.buffer = MVPMatrixUBs_[swapchain_image_index]->GetBuffer();
 	mvp_matrix_buffer_info.offset = 0;
-	mvp_matrix_buffer_info.range = MVPMatrixUB_->GetBufferSize();
+	mvp_matrix_buffer_info.range = MVPMatrixUBs_[swapchain_image_index]->GetBufferSize();
 	
 	VkWriteDescriptorSet mvp_matrix_write{};
 	mvp_matrix_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	mvp_matrix_write.dstSet = DescriptorSet_;
+	mvp_matrix_write.dstSet = DescriptorSets_[swapchain_image_index];
 	mvp_matrix_write.dstBinding = 0;
 	mvp_matrix_write.dstArrayElement = 0;
 	mvp_matrix_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -126,7 +156,7 @@ void IVRMaterial::WriteToDescriptorSet()
 
 		VkWriteDescriptorSet texture_write{};
 		texture_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		texture_write.dstSet = DescriptorSet_;
+		texture_write.dstSet = DescriptorSets_[swapchain_image_index];
 		texture_write.dstBinding = 1;
 		texture_write.dstArrayElement = 0;
 		texture_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -139,16 +169,16 @@ void IVRMaterial::WriteToDescriptorSet()
 	vkUpdateDescriptorSets(DeviceManager_->GetLogicalDevice(), static_cast<uint32_t>(descriptor_writes.size()), descriptor_writes.data(), 0, nullptr);
 }
 
-void IVRMaterial::WriteMVPMatrixToDescriptorSet()
+void IVRMaterial::WriteMVPMatrixToDescriptorSet(uint32_t swapchain_image_index)
 {
 	VkDescriptorBufferInfo mvp_matrix_buffer_info{}; 
-	mvp_matrix_buffer_info.buffer = MVPMatrixUB_->GetBuffer(); 
+	mvp_matrix_buffer_info.buffer = MVPMatrixUBs_[swapchain_image_index]->GetBuffer();
 	mvp_matrix_buffer_info.offset = 0; 
-	mvp_matrix_buffer_info.range = MVPMatrixUB_->GetBufferSize();
+	mvp_matrix_buffer_info.range = MVPMatrixUBs_[swapchain_image_index]->GetBufferSize();
 
 	VkWriteDescriptorSet mvp_matrix_write{}; 
 	mvp_matrix_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET; 
-	mvp_matrix_write.dstSet = DescriptorSet_; 
+	mvp_matrix_write.dstSet = DescriptorSets_[swapchain_image_index];
 	mvp_matrix_write.dstBinding = 0; 
 	mvp_matrix_write.dstArrayElement = 0; 
 	mvp_matrix_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
@@ -160,12 +190,12 @@ void IVRMaterial::WriteMVPMatrixToDescriptorSet()
 
 void IVRMaterial::SetMVPMatrixUB(std::shared_ptr<IVRUBManager> mvp_matrix_ub)
 {
-	MVPMatrixUB_ = mvp_matrix_ub;
+	MVPMatrixUBs_.push_back(mvp_matrix_ub);
 }
 
-std::shared_ptr<IVRUBManager> IVRMaterial::GetMVPMatrixUB()
+std::shared_ptr<IVRUBManager> IVRMaterial::GetMVPMatrixUB(uint32_t swapchain_image_index)
 {
-	return MVPMatrixUB_;
+	return MVPMatrixUBs_[swapchain_image_index];
 }
 
 void IVRMaterial::SetPipeline(VkPipeline pipeline)
@@ -196,4 +226,12 @@ std::string IVRMaterial::GetVertexShaderPath()
 std::string IVRMaterial::GetFragmentShaderPath()
 {
 	return FragmentShaderPath_;
+}
+
+void IVRMaterial::UpdatePipelineConfigBasedOnMaterialProperties(IVRFixedFunctionPipelineConfig& ff_pipeline_config)
+{
+	if (MaterialProperties_.IsCubemap)
+	{
+		ff_pipeline_config.Rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+	}
 }

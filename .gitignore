@@ -4,3 +4,5 @@ build/
 x64/
 *.vcxproj*
 *.sln
+*.spv
+

@@ -208,8 +208,8 @@ void IVRSwapchainManager::CreateImageViews()
 
     for(size_t i = 0; i < SwapchainImageViews_.size(); i++)
     {
-        SwapchainImageViews_[i] = IVRImageUtils::CreateImageView(DeviceManager_->GetLogicalDevice(), SwapchainImages_[i],
-            																SwapchainImageFormat_, VK_IMAGE_ASPECT_COLOR_BIT);
+        IVRImageUtils::CreateImageView(DeviceManager_->GetLogicalDevice(), SwapchainImages_[i],
+            						SwapchainImageFormat_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, 1, SwapchainImageViews_[i]);
     }
 }
 

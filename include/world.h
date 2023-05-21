@@ -19,10 +19,11 @@ private:
 
 	std::vector<std::shared_ptr<IVRRenderObject>> RenderObjects_;
 	std::shared_ptr<IVRCamera> Camera_;
+	uint32_t SwapchainImageCount_;
 
 public:
 
-	IVRWorld(std::shared_ptr<IVRDeviceManager> device_manager);
+	IVRWorld(std::shared_ptr<IVRDeviceManager> device_manager, uint32_t swapchain_image_count);
 
 	void SetupCamera();
 
@@ -33,7 +34,7 @@ public:
 	void WriteDescriptorSets();
 
 	void Init();
-	void Update(float dt);
+	void Update(float dt, uint32_t swapchain_index);
 
 	std::vector<std::shared_ptr<IVRRenderObject>> GetRenderObjects();
 

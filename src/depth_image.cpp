@@ -18,16 +18,16 @@ void IVRDepthImage::CreateDepthResources()
 
     VkFormat depth_format = FindDepthFormat();
 
-    IVRImageUtils::CreateVkImageAndBindMemory(
-        DeviceManager_->GetLogicalDevice(), DeviceManager_->GetPhysicalDevice(), DepthImageExtent_.width, DepthImageExtent_.height, depth_format,
-        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    IVRImageUtils::CreateImageAndBindMemory(
+        DeviceManager_->GetLogicalDevice(), DeviceManager_->GetPhysicalDevice(), DepthImageExtent_.width, DepthImageExtent_.height, depth_format, 1,
+        VK_IMAGE_TILING_OPTIMAL, 0, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         DepthImage_, DepthImageMemory_);
     
-    DepthImageView_ = IVRImageUtils::CreateImageView(DeviceManager_->GetLogicalDevice(), DepthImage_, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT);
+    IVRImageUtils::CreateImageView(DeviceManager_->GetLogicalDevice(), DepthImage_, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_VIEW_TYPE_2D, 1, DepthImageView_);
     
     IVRImageUtils::TransitionImageLayout(
         DeviceManager_->GetLogicalDevice(), DeviceManager_->GetDeviceQueueFamilies().graphicsFamily, DeviceManager_->GetGraphicsQueue(),
-        DepthImage_, depth_format, 
+        DepthImage_, depth_format, 1,
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
