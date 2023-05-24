@@ -3,12 +3,22 @@
         "name" : "viking_room",
         "type" : "3d_model",
         "model_path" : "viking_room/viking_room.obj",
-        "material" : "viking_room"
+        "material" : "viking_room_mat",
+        "transform" : {
+            "position" : [0, 0, 0],
+            "rotation" : [0, 0, 0],
+            "scale" : [1, 1, 1]
+        }
     },
     {
         "name" : "skybox",
         "type" : "skybox",
         "model_path" : "simple_cube.obj",
-        "material" : "cubemap"
+        "material" : "cubemap",
+        "transform" : {
+            "position" : [0, 0, 0],
+            "rotation" : [0, 0, 0],
+            "scale" : [1, 1, 1]
+        }
     }
 ]
