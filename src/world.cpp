@@ -12,8 +12,10 @@ void IVRWorld::Init()
 	
 	DescriptorManager_ = std::make_shared<IVRDescriptorManager>(DeviceManager_);
 	LightManager_ = std::make_shared<IVRLightManager>(DeviceManager_, SwapchainImageCount_);
-	
-	
+
+	IVRWorldLoader world_loader;
+	world_loader.LoadFiles();
+		
 	SetupCamera();
 	LightManager_->SetupLights();
 	LoadRenderObjectsVector();

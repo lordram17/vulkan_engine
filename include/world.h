@@ -8,6 +8,7 @@
 #include "renderobject.h"
 #include "camera.h"
 #include "light_manager.h"
+#include "world_loader.h"
 #include "debug_logger_utils.h"
 
 
