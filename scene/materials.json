@@ -1,0 +1,21 @@
+[
+    {
+        "name": "viking_room_mat",
+        "type": "phong",
+        "vertex_shader": "simple_texture_mapped.vert.spv",
+        "fragment_shader": "simple_texture_mapped.frag.spv",
+        "textures": [
+            "viking_room.png"
+        ],
+        "specular_color": [0.0, 0.0, 0.0],
+        "diffuse_color": [1.0, 1.0, 1.0],
+        "specular_power" : 1.0
+    },
+
+    {
+        "name" : "cubemap",
+        "type" : "cubemap",
+        "vertex_shader" : "cubemap.vert.spv",
+        "fragment_shader" : "cubemap.frag.spv"
+    }
+]

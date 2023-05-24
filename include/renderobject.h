@@ -17,7 +17,7 @@ private:
 	std::shared_ptr<IVRModel> Model_;
 	std::shared_ptr<IVRMaterial> Material_;
 	std::shared_ptr<IVRCamera> Camera_;
-	MVPUniformBufferObject MVPMatrixObj;
+	MVPUBObj MVPMatrixObj;
 	uint32_t SwapchainImageCount_;
 
 public:

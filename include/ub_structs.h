@@ -5,18 +5,16 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-struct MVPUniformBufferObject {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 proj;
+struct MVPUBObj {
+    glm::mat4 Model;
+    glm::mat4 View;
+    glm::mat4 Proj;
 };
 
-struct LightUniformBufferObject {
-	glm::vec3 position;
-	glm::vec3 direction;
-	glm::vec3 color;
-	glm::vec3 ambient_color;
-	glm::vec3 diffuse_color;
-	glm::vec3 specular_color;
-	float specular_power;
+struct MaterialPropertiesUBObj {
+	float SpecularPower = 0;
+	uint32_t IsCubemap = 0;
+	alignas (16) glm::vec3 SpecularColor = glm::vec3(0, 0, 0);
+	alignas (16) glm::vec3 DiffuseColor = glm::vec3(0, 0, 0);
 };
+

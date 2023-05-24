@@ -1,0 +1,14 @@
+[
+    {
+        "name" : "viking_room",
+        "type" : "3d_model",
+        "model_path" : "viking_room/viking_room.obj",
+        "material" : "viking_room"
+    },
+    {
+        "name" : "skybox",
+        "type" : "skybox",
+        "model_path" : "simple_cube.obj",
+        "material" : "cubemap"
+    }
+]

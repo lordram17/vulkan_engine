@@ -22,10 +22,10 @@ std::shared_ptr<IVRUBManager> IVRRenderObject::GetMVPMatrixUB(uint32_t swapchain
 
 void IVRRenderObject::UpdateMVPMatrixUB(uint32_t swapchain_image_index)
 {
-    MVPMatrixObj.model = Model_->GetTransform().GetModelMatrix();
-    MVPMatrixObj.view = Camera_->GetViewMatrix();
-    MVPMatrixObj.proj = Camera_->GetProjectionMatrix();
+    MVPMatrixObj.Model = Model_->GetTransform().GetModelMatrix();
+    MVPMatrixObj.View = Camera_->GetViewMatrix();
+    MVPMatrixObj.Proj = Camera_->GetProjectionMatrix();
 
-    Material_->GetMVPMatrixUB(swapchain_image_index)->WriteToUniformBuffer(&MVPMatrixObj, static_cast<VkDeviceSize>(sizeof(MVPUniformBufferObject)));
+    Material_->GetMVPMatrixUB(swapchain_image_index)->WriteToUniformBuffer(&MVPMatrixObj, static_cast<VkDeviceSize>(sizeof(MVPUBObj)));
 }
 

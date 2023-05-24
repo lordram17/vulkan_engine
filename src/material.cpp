@@ -2,9 +2,10 @@
 
 IVRMaterial::IVRMaterial(std::shared_ptr<IVRDeviceManager> device_manager, 
 	std::string vertex_shader_name, std::string fragment_shader_name, 
-	std::vector<std::string> texture_names, MaterialProperties properties, uint32_t swapchain_image_count) :
+	std::vector<std::string> texture_names, MaterialPropertiesUBObj properties, uint32_t swapchain_image_count,
+	std::vector<std::vector<std::shared_ptr<IVRUBManager>>>& light_ubos) :
 	DeviceManager_(device_manager), 
-	MaterialProperties_(properties), SwapchainImageCount_(swapchain_image_count)
+	MaterialProperties_(properties), SwapchainImageCount_(swapchain_image_count), LightUBs_(light_ubos)
 {
 	VertexShaderPath_ = IVRPath::GetCrossPlatformPath({"shaders", vertex_shader_name });
 	FragmentShaderPath_ = IVRPath::GetCrossPlatformPath({ "shaders", fragment_shader_name });
@@ -36,24 +37,59 @@ IVRMaterial::IVRMaterial(std::shared_ptr<IVRDeviceManager> device_manager,
 		Textures_.push_back(texture_object);
 	}
 
+	LightCount_ = LightUBs_[0].size();
+	InitMVPMatrixUBs();
+	InitMaterialPropertiesUBs();
 	CreateDescriptorSetLayoutInfo();
 }
 
 void IVRMaterial::CreateDescriptorSetLayoutInfo()
 {
+	//binding layout :
+	//0: MVP matrix
+	//1-5: Light 1-5
+	//6 : Material properties
+	// 7+ : textures
+
 	DescriptorSetInfo_ = {};
 	
+	uint32_t binding_count = 0;
+
 	//assign the mvp matrix uniform buffer always to the binding 0
 	VkDescriptorSetLayoutBinding mvp_matrix_binding{};
-	mvp_matrix_binding.binding = 0;
+	mvp_matrix_binding.binding = binding_count;
 	mvp_matrix_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	mvp_matrix_binding.descriptorCount = 1;
 	mvp_matrix_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	mvp_matrix_binding.pImmutableSamplers = nullptr; // Optional
 
 	DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(mvp_matrix_binding);
+	binding_count++;
+
+	//adding 5 light bindings
+	while (binding_count < LightCount_ + 1) {
+		//Light at binding 1
+		VkDescriptorSetLayoutBinding light_binding{};
+		light_binding.binding = binding_count;
+		light_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		light_binding.descriptorCount = 1;
+		light_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+		light_binding.pImmutableSamplers = nullptr; // Optional
+
+		DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(light_binding);
+		binding_count++;
+	}
 	
-	uint32_t binding_count = 1; //the mvp matrix uniform buffer is always at binding 0, so we start at 1 for the next bindings
+	//adding the material properties binding
+	VkDescriptorSetLayoutBinding material_properties_binding{}; 
+	material_properties_binding.binding = binding_count;
+	material_properties_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
+	material_properties_binding.descriptorCount = 1;
+	material_properties_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	material_properties_binding.pImmutableSamplers = nullptr; // Optional
+
+	DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(material_properties_binding);
+	binding_count++;
 
 	//assign the texture samplers to the next bindings
 	for (std::shared_ptr<IVRTexture> texture_object : Textures_)
@@ -68,6 +104,8 @@ void IVRMaterial::CreateDescriptorSetLayoutInfo()
 		DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(texture_binding);
 		binding_count++;
 	}
+
+	int a = 1;
 }
 
 IVRDescriptorSetInfo IVRMaterial::GetDescriptorSetInfo()
@@ -84,6 +122,13 @@ std::vector<VkDescriptorPoolSize> IVRMaterial::GetDescriptorPoolSize()
 	mvp_matrix_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	mvp_matrix_pool_size.descriptorCount = 1;
 	
+	VkDescriptorPoolSize light_pool_size{};
+	light_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	light_pool_size.descriptorCount = 5;
+
+	VkDescriptorPoolSize material_properties_pool_size{};
+	material_properties_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	material_properties_pool_size.descriptorCount = 1;
 	
 	//the texture samplers may be more than one dependending on the number of textures
 	VkDescriptorPoolSize texture_pool_size{};
@@ -93,6 +138,8 @@ std::vector<VkDescriptorPoolSize> IVRMaterial::GetDescriptorPoolSize()
 	for(uint32_t i = 0; i < SwapchainImageCount_; i++){
 		descriptor_pool_size.push_back(mvp_matrix_pool_size);
 		descriptor_pool_size.push_back(texture_pool_size);
+		descriptor_pool_size.push_back(material_properties_pool_size);
+		descriptor_pool_size.push_back(light_pool_size);
 	}
 
 	return descriptor_pool_size;
@@ -145,8 +192,43 @@ void IVRMaterial::WriteToDescriptorSet(uint32_t swapchain_image_index)
 	
 	descriptor_writes.push_back(mvp_matrix_write);
 
-	//write the texture samplers to the descriptor set
+	//wrie the light uniform buffer to the descriptor set
+	for (uint32_t i = 0; i < LightCount_; i++) {
+		VkDescriptorBufferInfo light_buffer_info{};
+		light_buffer_info.buffer = LightUBs_[swapchain_image_index][i]->GetBuffer();
+		light_buffer_info.offset = 0;
+		light_buffer_info.range = LightUBs_[swapchain_image_index][i]->GetBufferSize();
+		
+		VkWriteDescriptorSet light_write{};
+		light_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		light_write.dstSet = DescriptorSets_[swapchain_image_index];
+		light_write.dstBinding = i + 1;
+		light_write.dstArrayElement = 0;
+		light_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		light_write.descriptorCount = 1;
+		light_write.pBufferInfo = &light_buffer_info;
+		
+		descriptor_writes.push_back(light_write);
+	}
 
+	//write the material properties uniform buffer to the descriptor set
+	VkDescriptorBufferInfo material_properties_buffer_info{};
+	material_properties_buffer_info.buffer = MaterialPropertiesUBs_[swapchain_image_index]->GetBuffer();
+	material_properties_buffer_info.offset = 0;
+	material_properties_buffer_info.range = MaterialPropertiesUBs_[swapchain_image_index]->GetBufferSize();
+
+	VkWriteDescriptorSet material_properties_write{};
+	material_properties_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	material_properties_write.dstSet = DescriptorSets_[swapchain_image_index];
+	material_properties_write.dstBinding = LightCount_ + 1;
+	material_properties_write.dstArrayElement = 0;
+	material_properties_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	material_properties_write.descriptorCount = 1;
+	material_properties_write.pBufferInfo = &material_properties_buffer_info;
+
+	descriptor_writes.push_back(material_properties_write);
+
+	//write the texture samplers to the descriptor set
 	for (int i = 0; i < Textures_.size(); i++)
 	{
 		VkDescriptorImageInfo image_info{};
@@ -157,7 +239,7 @@ void IVRMaterial::WriteToDescriptorSet(uint32_t swapchain_image_index)
 		VkWriteDescriptorSet texture_write{};
 		texture_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		texture_write.dstSet = DescriptorSets_[swapchain_image_index];
-		texture_write.dstBinding = 1;
+		texture_write.dstBinding = LightCount_ + 2 + i;
 		texture_write.dstArrayElement = 0;
 		texture_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		texture_write.descriptorCount = 1;
@@ -188,14 +270,37 @@ void IVRMaterial::WriteMVPMatrixToDescriptorSet(uint32_t swapchain_image_index)
 	vkUpdateDescriptorSets(DeviceManager_->GetLogicalDevice(), 1, &mvp_matrix_write, 0, nullptr);
 }
 
-void IVRMaterial::SetMVPMatrixUB(std::shared_ptr<IVRUBManager> mvp_matrix_ub)
+void IVRMaterial::InitMVPMatrixUBs()
 {
-	MVPMatrixUBs_.push_back(mvp_matrix_ub);
+	for (uint32_t i = 0; i < SwapchainImageCount_; i++)
+	{
+		std::shared_ptr<IVRUBManager> mvp_matrix_ub = std::make_shared<IVRUBManager>(DeviceManager_, sizeof(MVPUBObj));
+		MVPMatrixUBs_.push_back(mvp_matrix_ub);
+	}
 }
 
 std::shared_ptr<IVRUBManager> IVRMaterial::GetMVPMatrixUB(uint32_t swapchain_image_index)
 {
 	return MVPMatrixUBs_[swapchain_image_index];
+}
+
+void IVRMaterial::SetLightsUBs(std::vector<std::shared_ptr<IVRUBManager>> light_ubs)
+{
+	LightUBs_.push_back(light_ubs);
+	LightCount_ = light_ubs.size();
+}
+
+void IVRMaterial::InitMaterialPropertiesUBs()
+{
+	for (uint32_t i = 0; i < SwapchainImageCount_; i++)
+	{
+		std::shared_ptr<IVRUBManager> material_properties_ub = std::make_shared<IVRUBManager>(DeviceManager_, sizeof(MaterialPropertiesUBObj));
+
+		//copy the material properties to the buffer
+		material_properties_ub->WriteToUniformBuffer(&MaterialProperties_, sizeof(MaterialPropertiesUBObj));
+
+		MaterialPropertiesUBs_.push_back(material_properties_ub);
+	}
 }
 
 void IVRMaterial::SetPipeline(VkPipeline pipeline)

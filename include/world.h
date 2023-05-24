@@ -7,6 +7,7 @@
 #include "device_setup.h"
 #include "renderobject.h"
 #include "camera.h"
+#include "light_manager.h"
 #include "debug_logger_utils.h"
 
 
@@ -19,6 +20,9 @@ private:
 
 	std::vector<std::shared_ptr<IVRRenderObject>> RenderObjects_;
 	std::shared_ptr<IVRCamera> Camera_;
+	
+	std::shared_ptr<IVRLightManager> LightManager_;
+	
 	uint32_t SwapchainImageCount_;
 
 public:
