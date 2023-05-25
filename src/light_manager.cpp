@@ -5,17 +5,9 @@ IVRLightManager::IVRLightManager(std::shared_ptr<IVRDeviceManager> device_manage
 {
 }
 
-void IVRLightManager::SetupLights()
+void IVRLightManager::SetupLights(std::vector<IVRLight>&& lights)
 {
-	//lets start with a simple directional light
-	IVRLight light = {};
-	light.Type = IVRLightType::Directional;
-	light.Direction = glm::vec3(-1.0f, -1.0f, -1.0f);
-	light.AmbientColor = glm::vec3(0.1f, 0.0f, 0.0f);
-	light.DiffuseColor = glm::vec3(0.5f, 0.0f, 0.0f);
-	light.SpecularColor = glm::vec3(1.0f, 0.0f, 0.0f);
-
-	Lights_.push_back(light);
+	Lights_ = lights;
 
 	for (uint32_t i = 0; i < SwapchainImageCount_; i++)
 	{

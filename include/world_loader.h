@@ -8,6 +8,7 @@
 
 class IVRWorldLoader {
 private:
+	std::vector<IVRLight> Lights_;
 
 	std::shared_ptr<IVRDeviceManager> DeviceManager_;
 	std::shared_ptr<IVRLightManager> LightManager_;
@@ -19,4 +20,5 @@ public:
 	~IVRWorldLoader();
 
 	std::vector<std::shared_ptr<IVRRenderObject>>  LoadRenderObjectsFromJson();
+	std::vector<IVRLight>&& LoadLightsFromJson();
 };

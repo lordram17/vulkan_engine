@@ -22,7 +22,7 @@ public:
 
 	IVRLightManager(std::shared_ptr<IVRDeviceManager> device_manager, uint32_t swapchain_image_count);
 
-	void SetupLights();
+	void SetupLights(std::vector<IVRLight>&& lights);
 	void TransformLightsByViewMatrix(glm::mat4 view, uint32_t swapchain_index);
 
 	uint32_t GetLightCount();

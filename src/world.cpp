@@ -14,9 +14,10 @@ void IVRWorld::Init()
 	LightManager_ = std::make_shared<IVRLightManager>(DeviceManager_, SwapchainImageCount_);
 
 	SetupCamera();
-	LightManager_->SetupLights();
-
+	
 	IVRWorldLoader world_loader(DeviceManager_, LightManager_, Camera_, SwapchainImageCount_);
+
+	LightManager_->SetupLights(world_loader.LoadLightsFromJson());
 	RenderObjects_ = world_loader.LoadRenderObjectsFromJson();
 	
 	CreateDescriptorSetLayoutsForRenderObjects();
@@ -60,7 +61,7 @@ void IVRWorld::LoadRenderObjectsVector()
 	material_properties.DiffuseColor = glm::vec3(1.0f, 0.0f, 0.0f);
 	material_properties.SpecularColor = glm::vec3(1.0f, 0.0f, 0.0f);
 	material_properties.SpecularPower = 1.0f ;
-	std::shared_ptr<IVRMaterial> material = std::make_shared<IVRMaterial>(DeviceManager_, "simple_texture_mapped.vert.spv", "simple_texture_mapped.frag.spv", textures_names, material_properties, SwapchainImageCount_, LightManager_->GetAllLightUBs());
+	std::shared_ptr<IVRMaterialInstance> material = std::make_shared<IVRMaterialInstance>(DeviceManager_, "simple_texture_mapped.vert.spv", "simple_texture_mapped.frag.spv", textures_names, material_properties, SwapchainImageCount_, LightManager_->GetAllLightUBs());
 	std::shared_ptr<IVRRenderObject> render_object = std::make_shared<IVRRenderObject>(model, material, Camera_, SwapchainImageCount_);
 	RenderObjects_.push_back(render_object);
 
@@ -69,7 +70,7 @@ void IVRWorld::LoadRenderObjectsVector()
 	model->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
 	textures_names = { "koln_wallraffplatz"}; //for cubemap, only folder name is needed
 	material_properties.IsCubemap = true;
-	material = std::make_shared<IVRMaterial>(DeviceManager_, "cubemap.vert.spv", "cubemap.frag.spv", textures_names, material_properties, SwapchainImageCount_, LightManager_->GetAllLightUBs());
+	material = std::make_shared<IVRMaterialInstance>(DeviceManager_, "cubemap.vert.spv", "cubemap.frag.spv", textures_names, material_properties, SwapchainImageCount_, LightManager_->GetAllLightUBs());
 	render_object = std::make_shared<IVRRenderObject>(model, material, Camera_, SwapchainImageCount_);
 	RenderObjects_.push_back(render_object);
 

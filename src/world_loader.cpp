@@ -33,7 +33,7 @@ std::vector<std::shared_ptr<IVRRenderObject>>  IVRWorldLoader::LoadRenderObjects
 		nlohmann::json object = objects_json_data[i];
 
 		std::shared_ptr<IVRModel> model;
-		std::shared_ptr<IVRMaterial> material;
+		std::shared_ptr<IVRMaterialInstance> material;
 		std::shared_ptr<IVRRenderObject> render_object;
 
 		if (object["type"] == "3d_model" || object["type"] == "skybox")
@@ -72,7 +72,7 @@ std::vector<std::shared_ptr<IVRRenderObject>>  IVRWorldLoader::LoadRenderObjects
 						material_properties_ubobj.SpecularPower = material_json["specular_power"];
 					}
 
-					material = std::make_shared<IVRMaterial>(DeviceManager_, vertex_shader_path, fragment_shader_path, texture_names, material_properties_ubobj, SwapchainImageCount_,
+					material = std::make_shared<IVRMaterialInstance>(DeviceManager_, vertex_shader_path, fragment_shader_path, texture_names, material_properties_ubobj, SwapchainImageCount_,
 																LightManager_->GetAllLightUBs());
 				}
 			}
@@ -96,6 +96,43 @@ std::vector<std::shared_ptr<IVRRenderObject>>  IVRWorldLoader::LoadRenderObjects
 	}
 
 	return render_objects;
+}
+
+std::vector<IVRLight>&& IVRWorldLoader::LoadLightsFromJson()
+{
+	std::string lights_path = IVRPath::GetCrossPlatformPath({ "scene", "lights.json" });
+
+	std::ifstream lights_file(lights_path);
+	nlohmann::json lights_json_data = nlohmann::json::parse(lights_file);
+
+	for (uint32_t i = 0; i < lights_json_data.size(); i++)
+	{
+		nlohmann::json light_data = lights_json_data[i];
+
+		IVRLight light = {};
+
+		if (light_data["type"] == "directional")
+		{
+			light.Direction = glm::vec3(light_data["direction"][0], light_data["direction"][1], light_data["direction"][2]);
+		}
+		else if (light_data["type"] == "point")
+		{
+			light.Position = glm::vec3(light_data["position"][0], light_data["position"][1], light_data["position"][2]);
+		}
+		else if (light_data["type"] == "spot")
+		{
+			light.Direction = glm::vec3(light_data["direction"][0], light_data["direction"][1], light_data["direction"][2]);
+			light.Position = glm::vec3(light_data["position"][0], light_data["position"][1], light_data["position"][2]);
+		}
+
+		light.AmbientColor = glm::vec3(light_data["ambient_color"][0], light_data["ambient_color"][1], light_data["ambient_color"][2]);
+		light.DiffuseColor = glm::vec3(light_data["diffuse_color"][0], light_data["diffuse_color"][1], light_data["diffuse_color"][2]);
+		light.SpecularColor = glm::vec3(light_data["specular_color"][0], light_data["specular_color"][1], light_data["specular_color"][2]);
+
+		Lights_.push_back(light);
+	}
+
+	return std::move(Lights_);
 }
 
 

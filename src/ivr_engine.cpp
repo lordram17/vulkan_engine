@@ -95,7 +95,7 @@ void IVREngine::CreatePipelines()
 	//create pipelines
 	for (std::shared_ptr<IVRRenderObject> render_object : World_->GetRenderObjects())
 	{
-		std::shared_ptr<IVRMaterial> material = render_object->GetMaterial();
+		std::shared_ptr<IVRMaterialInstance> material = render_object->GetMaterial();
 		IVRFixedFunctionPipelineConfig pipeline_config(SwapchainManager_->GetSwapchainExtent());
 		material->UpdatePipelineConfigBasedOnMaterialProperties(pipeline_config);
 
@@ -132,7 +132,7 @@ void IVREngine::DrawFrame()
 
 	for (std::shared_ptr<IVRRenderObject> render_object : World_->GetRenderObjects())
 	{
-		std::shared_ptr<IVRMaterial> material = render_object->GetMaterial();
+		std::shared_ptr<IVRMaterialInstance> material = render_object->GetMaterial();
 		VkPipeline pipeline = material->GetPipeline();
 		
 		vkCmdBindPipeline(CBManager_->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);

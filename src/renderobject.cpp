@@ -1,6 +1,6 @@
 #include "renderobject.h"
 
-IVRRenderObject::IVRRenderObject(std::shared_ptr<IVRModel> model, std::shared_ptr<IVRMaterial> material, std::shared_ptr<IVRCamera> camera, uint32_t swapchain_image_count)
+IVRRenderObject::IVRRenderObject(std::shared_ptr<IVRModel> model, std::shared_ptr<IVRMaterialInstance> material, std::shared_ptr<IVRCamera> camera, uint32_t swapchain_image_count)
 : Model_(model), Material_(material), Camera_(camera), SwapchainImageCount_(swapchain_image_count)
 {
 }
@@ -10,7 +10,7 @@ std::shared_ptr<IVRModel> IVRRenderObject::GetModel()
     return Model_;
 }
 
-std::shared_ptr<IVRMaterial> IVRRenderObject::GetMaterial()
+std::shared_ptr<IVRMaterialInstance> IVRRenderObject::GetMaterial()
 {
     return Material_;
 }

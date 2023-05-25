@@ -15,17 +15,17 @@ class IVRRenderObject {
 private:
 
 	std::shared_ptr<IVRModel> Model_;
-	std::shared_ptr<IVRMaterial> Material_;
+	std::shared_ptr<IVRMaterialInstance> Material_;
 	std::shared_ptr<IVRCamera> Camera_;
 	MVPUBObj MVPMatrixObj;
 	uint32_t SwapchainImageCount_;
 
 public:
 	
-	IVRRenderObject(std::shared_ptr<IVRModel> model, std::shared_ptr<IVRMaterial> material, std::shared_ptr<IVRCamera> camera, uint32_t swapchain_image_count);
+	IVRRenderObject(std::shared_ptr<IVRModel> model, std::shared_ptr<IVRMaterialInstance> material, std::shared_ptr<IVRCamera> camera, uint32_t swapchain_image_count);
 
 	std::shared_ptr<IVRModel> GetModel();
-	std::shared_ptr<IVRMaterial> GetMaterial();
+	std::shared_ptr<IVRMaterialInstance> GetMaterial();
 	std::shared_ptr<IVRUBManager> GetMVPMatrixUB(uint32_t swapchain_image_index);
 
 	void UpdateMVPMatrixUB(uint32_t swapchain_image_index);
