@@ -27,12 +27,13 @@ layout(binding = 3) uniform sampler2D tex_sampler;
 void main() {
     vec3 view_direction = camera_world_pos - frag_position;
 
-    vec3 halfway_vector = (-normalize(dir_light.direction) + normalize(view_direction)) / (length(normalize(dir_light.direction) + -normalize(frag_position)));
+    vec3 halfway_vector = normalize(-normalize(dir_light.direction) + normalize(view_direction)) ;
 
     float diffuse_intensity = max(dot(normalize(frag_normal), -normalize(dir_light.direction)), 0.0);
     vec3 diffuse = diffuse_intensity * (material.diffuse_color * dir_light.diffuse_color);
 
     float specular_intensity = pow(max(dot(normalize(frag_normal), halfway_vector), 0.0), material.specular_power);
+
     vec3 specular = specular_intensity * (material.specular_color * dir_light.specular_color);
 
     vec3 ambient = dir_light.ambient_color;
