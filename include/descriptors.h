@@ -55,7 +55,7 @@ public:
 	//create descriptor set layouts for every IVRDescriptorSetInfo
 	void CreateDescriptorSetLayouts();
 
-	VkDescriptorSetLayout CreateDescriptorSetLayout(IVRDescriptorSetInfo descriptor_set_info);
+	VkDescriptorSetLayout CreateDescriptorSetLayout(IVRDescriptorSetInfo& descriptor_set_info);
 
 	void CreateDescriptorPool(std::vector<VkDescriptorPoolSize>& descriptor_pool_sizes, uint32_t max_sets);
 

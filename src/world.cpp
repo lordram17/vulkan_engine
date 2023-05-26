@@ -18,9 +18,11 @@ void IVRWorld::Init()
 	IVRWorldLoader world_loader(DeviceManager_, LightManager_, Camera_, SwapchainImageCount_);
 
 	LightManager_->SetupLights(world_loader.LoadLightsFromJson());
+	BaseMaterials_ = world_loader.LoadBaseMaterialsFromJson();
 	RenderObjects_ = world_loader.LoadRenderObjectsFromJson();
+	OrganizeRenderObjectsByBaseMaterial();
 	
-	CreateDescriptorSetLayoutsForRenderObjects();
+	CreateDescriptorSetLayoutsForBaseMaterials();
 	CountPoolSizes();
 	CreateDescriptorSets();
 	WriteDescriptorSets();
@@ -38,73 +40,53 @@ void IVRWorld::Update(float dt, uint32_t swapchain_index)
 }
 
 
-std::vector<std::shared_ptr<IVRRenderObject>> IVRWorld::GetRenderObjects()
+std::vector<std::shared_ptr<IVRRenderObject>>& IVRWorld::GetRenderObjects()
 {
 	return RenderObjects_;
 }
 
-
-void IVRWorld::LoadRenderObjectsVector()
+std::vector<std::shared_ptr<IVRBaseMaterial>>& IVRWorld::GetBaseMaterials()
 {
-	IVR_LOG_INFO("Creating render objects...");
+	return BaseMaterials_;
+}
 
-	IVR_LOG_INFO("Creating mvp matric uniform buffers for all render objects...");
-
-
-	IVR_LOG_INFO("	- Creating viking room...");
-	//logic for creating render objects and adding them to the vector
-	std::shared_ptr<IVRModel> model = std::make_shared<IVRModel>(DeviceManager_, "viking_room/viking_room.obj");
-	model->SetPosition(glm::vec3(0.0f, 10.0f, 10.0f));
-	model->SetRotation(glm::vec3(0.0f, 45.0f, 45.0f));
-	std::vector<std::string> textures_names = { "viking_room.png" };
-	MaterialPropertiesUBObj material_properties;
-	material_properties.DiffuseColor = glm::vec3(1.0f, 0.0f, 0.0f);
-	material_properties.SpecularColor = glm::vec3(1.0f, 0.0f, 0.0f);
-	material_properties.SpecularPower = 1.0f ;
-	std::shared_ptr<IVRMaterialInstance> material = std::make_shared<IVRMaterialInstance>(DeviceManager_, "simple_texture_mapped.vert.spv", "simple_texture_mapped.frag.spv", textures_names, material_properties, SwapchainImageCount_, LightManager_->GetAllLightUBs());
-	std::shared_ptr<IVRRenderObject> render_object = std::make_shared<IVRRenderObject>(model, material, Camera_, SwapchainImageCount_);
-	RenderObjects_.push_back(render_object);
-
-	IVR_LOG_INFO("	- Creating cubemap...");
-	model = std::make_shared<IVRModel>(DeviceManager_, "simple_cube.obj");
-	model->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
-	textures_names = { "koln_wallraffplatz"}; //for cubemap, only folder name is needed
-	material_properties.IsCubemap = true;
-	material = std::make_shared<IVRMaterialInstance>(DeviceManager_, "cubemap.vert.spv", "cubemap.frag.spv", textures_names, material_properties, SwapchainImageCount_, LightManager_->GetAllLightUBs());
-	render_object = std::make_shared<IVRRenderObject>(model, material, Camera_, SwapchainImageCount_);
-	RenderObjects_.push_back(render_object);
-
-	for (uint32_t i = 0; i < SwapchainImageCount_; i++)
+void IVRWorld::OrganizeRenderObjectsByBaseMaterial()
+{
+	IVR_LOG_INFO("Organizing render objects by base material...");
+	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
 	{
-		for (std::shared_ptr<IVRRenderObject> ro : RenderObjects_)
-		{
-			ro->UpdateMVPMatrixUB(i);
-		}
+		std::shared_ptr<IVRBaseMaterial> base_material = render_object->GetMaterialInstance()->GetBaseMaterial();
+		BaseMaterialRenderObjectMap_[base_material].push_back(render_object);
 	}
+}
+
+std::unordered_map<std::shared_ptr<IVRBaseMaterial>, std::vector<std::shared_ptr<IVRRenderObject>>>& IVRWorld::GetBaseMaterialRenderObjectMap()
+{
+	return BaseMaterialRenderObjectMap_;
 }
 
 void IVRWorld::SetupCamera()
 {
 	Camera_ = std::make_shared<IVRCamera>();
-	Camera_->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
 }
 
+void IVRWorld::SetCameraAspectRatio(float aspect_ratio)
+{
+	Camera_->AspectRatio = aspect_ratio;
+}
 
-void IVRWorld::CreateDescriptorSetLayoutsForRenderObjects()
+void IVRWorld::CreateDescriptorSetLayoutsForBaseMaterials()
 {
 	IVR_LOG_INFO("Creating descriptor set layouts for render objects...");
 	//take the IVRDescriptorSetInfo objects from the renderobject->material and create the descriptor set layouts
-
 	//for each render object
 		
-	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
+	for (std::shared_ptr<IVRBaseMaterial>& base_material : BaseMaterials_)
 	{
-		IVRDescriptorSetInfo descriptor_set_info = render_object->GetMaterial()->GetDescriptorSetInfo();
+		IVRDescriptorSetInfo descriptor_set_info = base_material->GetDescriptorSetInfo();
 		VkDescriptorSetLayout descriptor_set_layout = DescriptorManager_->CreateDescriptorSetLayout(descriptor_set_info);
-		render_object->GetMaterial()->AssignDescriptorSetLayout(descriptor_set_layout);
+		base_material->SetDescriptorSetLayout(descriptor_set_layout);
 	}
-
-	//*IMP* Note about materials : looping over render objects to get materials is incorrect because the same material can be used by multiple render objects.
 }
 
 std::vector<VkDescriptorPoolSize> IVRWorld::CountPoolSizes()
@@ -115,7 +97,7 @@ std::vector<VkDescriptorPoolSize> IVRWorld::CountPoolSizes()
 	//for each render object
 	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
 	{
-		for (VkDescriptorPoolSize pool_size : render_object->GetMaterial()->GetDescriptorPoolSize())
+		for (VkDescriptorPoolSize pool_size : render_object->GetMaterialInstance()->GetBaseMaterial()->GetDescriptorPoolSize())
 		{
 			pool_sizes.push_back(pool_size);
 		}
@@ -145,8 +127,8 @@ void IVRWorld::CreateDescriptorSets()
 	{
 		for (uint32_t i = 0; i < SwapchainImageCount_; i++) 
 		{
-			VkDescriptorSet descriptor_set = DescriptorManager_->CreateDescriptorSet(render_object->GetMaterial()->GetDescriptorSetLayout());
-			render_object->GetMaterial()->AssignDescriptorSet(descriptor_set);
+			VkDescriptorSet descriptor_set = DescriptorManager_->CreateDescriptorSet(render_object->GetMaterialInstance()->GetBaseMaterial()->GetDescriptorSetLayout());
+			render_object->GetMaterialInstance()->AssignDescriptorSet(descriptor_set);
 		}
 	}
 }
@@ -159,7 +141,7 @@ void IVRWorld::WriteDescriptorSets()
 	{
 		for (uint32_t i = 0; i < SwapchainImageCount_; i++)
 		{
-			render_object->GetMaterial()->WriteToDescriptorSet(i);
+			render_object->GetMaterialInstance()->WriteToDescriptorSet(i);
 		}
 	}
 }

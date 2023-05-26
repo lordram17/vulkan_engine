@@ -11,29 +11,22 @@
 #include "ivr_path.h"
 #include "ub_structs.h"
 #include "device_setup.h"
-
-#include "pipeline_config.h"
+#include "material.h"
 
 
 class IVRMaterialInstance {
 
 private:
-	std::string VertexShaderPath_;
-	std::string FragmentShaderPath_;
+	std::shared_ptr<IVRBaseMaterial> BaseMaterial_;
 
 	std::vector<std::string> TextureNames_;
 	std::vector<std::shared_ptr<IVRTexture>> Textures_;
 
 	std::vector<VkDescriptorSet> DescriptorSets_;
-	VkDescriptorSetLayout DescriptorSetLayout_;
-	IVRDescriptorSetInfo DescriptorSetInfo_;
 
 	std::vector<std::shared_ptr<IVRUBManager>> MVPMatrixUBs_;
 
 	std::shared_ptr<IVRDeviceManager> DeviceManager_;
-
-	VkPipelineLayout PipelineLayout_;
-	VkPipeline Pipeline_;
 
 	MaterialPropertiesUBObj MaterialProperties_;
 
@@ -47,20 +40,9 @@ private:
 	std::vector<std::shared_ptr<IVRUBManager>> MaterialPropertiesUBs_;
 
 public:
-	IVRMaterialInstance(std::shared_ptr<IVRDeviceManager> device_manager, std::string vertex_shader_name, std::string fragment_shader_name, 
+	IVRMaterialInstance(std::shared_ptr<IVRDeviceManager> device_manager, std::shared_ptr<IVRBaseMaterial> base_material,
 				std::vector<std::string> texture_names, MaterialPropertiesUBObj properties, uint32_t swapchain_image_count, 
 				std::vector<std::vector<std::shared_ptr<IVRUBManager>>>& light_ubos);
-
-	//create the IVRDescriptorSetInfo that will be used to create the descriptor set layout
-	void CreateDescriptorSetLayoutInfo();
-	IVRDescriptorSetInfo GetDescriptorSetInfo();
-	
-	//Get the descriptor pool size for this material (the resources required by this material on the descriptor pool)
-	std::vector<VkDescriptorPoolSize> GetDescriptorPoolSize();
-
-	//IVRDescriptorManager creates the descriptor set layout, descriptor pool and descriptor sets. Here we just assign the descriptor set layout to the material
-	void AssignDescriptorSetLayout(VkDescriptorSetLayout layout);
-	VkDescriptorSetLayout GetDescriptorSetLayout();
 	
 	void AssignDescriptorSet(VkDescriptorSet descriptor_set);
 	VkDescriptorSet GetDescriptorSet(uint32_t swapchain_image_index);
@@ -74,13 +56,5 @@ public:
 	void SetLightsUBs(std::vector<std::shared_ptr<IVRUBManager>> light_ubs);
 	void InitMaterialPropertiesUBs();
 
-	void SetPipeline(VkPipeline pipeline);
-	VkPipeline GetPipeline();
-	void SetPipelineLayout(VkPipelineLayout pipeline_layout);
-	VkPipelineLayout GetPipelineLayout();
-
-	std::string GetVertexShaderPath();
-	std::string GetFragmentShaderPath();
-
-	void UpdatePipelineConfigBasedOnMaterialProperties(IVRFixedFunctionPipelineConfig& ff_pipeline_config);
+	std::shared_ptr<IVRBaseMaterial> GetBaseMaterial();
 };

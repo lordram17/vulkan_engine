@@ -3,10 +3,10 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-IVRModel::IVRModel(std::shared_ptr<IVRDeviceManager> device_manager, std::string model_name) :
-    DeviceManager_{ device_manager }
+IVRModel::IVRModel(std::shared_ptr<IVRDeviceManager> device_manager, std::string model_name, std::string model_path) :
+    DeviceManager_{ device_manager }, Name_{ model_name }
 {
-    ModelPath_ = IVRPath::GetCrossPlatformPath({ "3d_models", model_name});
+    ModelPath_ = IVRPath::GetCrossPlatformPath({ "3d_models", model_path});
     LoadModel();
     CreateVertexBuffer();
     CreateIndexBuffer();

@@ -14,7 +14,7 @@ void IVREngine::InitEngine()
 	IVR_LOG_INFO("Initializing Engine");
 
 	IVR_LOG_INFO("Initializing GLFW and Creating Window...");
-	Window_ = std::make_shared<IVRWindow>(1920, 1080);
+	Window_ = std::make_shared<IVRWindow>(2160, 1440);
 	Window_->InitWindow();
 	
 	IVR_LOG_INFO("Creating Vulkan instance...");
@@ -54,6 +54,7 @@ void IVREngine::InitEngine()
 
 void IVREngine::PostWorldInit()
 {
+	World_->SetCameraAspectRatio(SwapchainManager_->GetSwapchainExtent().width / (float)SwapchainManager_->GetSwapchainExtent().height);
 	PipelineCreator_ = std::make_shared<IVRPipelineCreator>(DeviceManager_);
 	IVR_LOG_INFO("Creating Pipelines...");
 	CreatePipelines();
@@ -93,18 +94,18 @@ void IVREngine::CreateRenderpass()
 void IVREngine::CreatePipelines()
 {
 	//create pipelines
-	for (std::shared_ptr<IVRRenderObject> render_object : World_->GetRenderObjects())
+	for (std::shared_ptr<IVRBaseMaterial>& base_material : World_->GetBaseMaterials())
 	{
-		std::shared_ptr<IVRMaterialInstance> material = render_object->GetMaterial();
+
 		IVRFixedFunctionPipelineConfig pipeline_config(SwapchainManager_->GetSwapchainExtent());
-		material->UpdatePipelineConfigBasedOnMaterialProperties(pipeline_config);
+		base_material->UpdatePipelineConfigBasedOnMaterialProperties(pipeline_config);
 
-		VkPipelineLayout pipeline_layout = PipelineCreator_->CreatePipelineLayout(material->GetDescriptorSetLayout());
+		VkPipelineLayout pipeline_layout = PipelineCreator_->CreatePipelineLayout(base_material->GetDescriptorSetLayout());
 		VkPipeline pipeline = PipelineCreator_->CreatePipeline(Renderpass_->GetRenderpass(), pipeline_config,
-			pipeline_layout, material->GetVertexShaderPath(), material->GetFragmentShaderPath());
+			pipeline_layout, base_material->GetVertexShaderPath(), base_material->GetFragmentShaderPath());
 
-		material->SetPipeline(pipeline);
-		material->SetPipelineLayout(pipeline_layout);
+		base_material->SetPipeline(pipeline);
+		base_material->SetPipelineLayout(pipeline_layout);
 	}
 }
 
@@ -130,23 +131,28 @@ void IVREngine::DrawFrame()
 	scissor.extent = SwapchainManager_->GetSwapchainExtent();
 	vkCmdSetScissor(CBManager_->GetCommandBuffer(), 0, 1, &scissor);
 
-	for (std::shared_ptr<IVRRenderObject> render_object : World_->GetRenderObjects())
+
+	for (std::unordered_map<std::shared_ptr<IVRBaseMaterial>, std::vector<std::shared_ptr<IVRRenderObject>>>::iterator iter = World_->GetBaseMaterialRenderObjectMap().begin();
+		iter != World_->GetBaseMaterialRenderObjectMap().end(); ++iter)
 	{
-		std::shared_ptr<IVRMaterialInstance> material = render_object->GetMaterial();
-		VkPipeline pipeline = material->GetPipeline();
-		
-		vkCmdBindPipeline(CBManager_->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-		
-		VkBuffer vertex_buffers[] = { render_object->GetModel()->GetVertexBuffer() };
-		VkDeviceSize offsets[] = { 0 };
-		
-		vkCmdBindVertexBuffers(CBManager_->GetCommandBuffer(), 0, 1, vertex_buffers, offsets);
-		vkCmdBindIndexBuffer(CBManager_->GetCommandBuffer(), render_object->GetModel()->GetIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
-		
-		VkDescriptorSet descriptor_sets[] = { material->GetDescriptorSet(CurrentSwapchainImageIndex_) };
-		vkCmdBindDescriptorSets(CBManager_->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, material->GetPipelineLayout(), 0, 1, descriptor_sets, 0, nullptr);
-		
-		vkCmdDrawIndexed(CBManager_->GetCommandBuffer(), render_object->GetModel()->Indices.size(), 1, 0, 0, 0);
+		std::shared_ptr<IVRBaseMaterial> base_material = iter->first;
+		std::vector<std::shared_ptr<IVRRenderObject>> render_objects = iter->second;
+
+		vkCmdBindPipeline(CBManager_->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, base_material->GetPipeline());
+
+		for (std::shared_ptr<IVRRenderObject> render_object : render_objects) 
+		{
+			VkBuffer vertex_buffers[] = { render_object->GetModel()->GetVertexBuffer() }; 
+			VkDeviceSize offsets[] = { 0 };
+			
+			vkCmdBindVertexBuffers(CBManager_->GetCommandBuffer(), 0, 1, vertex_buffers, offsets);
+			vkCmdBindIndexBuffer(CBManager_->GetCommandBuffer(), render_object->GetModel()->GetIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+			
+			VkDescriptorSet descriptor_sets[] = { render_object->GetMaterialInstance()->GetDescriptorSet(CurrentSwapchainImageIndex_)};
+			vkCmdBindDescriptorSets(CBManager_->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, base_material->GetPipelineLayout(), 0, 1, descriptor_sets, 0, nullptr);
+			
+			vkCmdDrawIndexed(CBManager_->GetCommandBuffer(), render_object->GetModel()->Indices.size(), 1, 0, 0, 0);
+		}
 	}
 
 

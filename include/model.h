@@ -66,6 +66,8 @@ class IVRModel {
 private:
     IVRModel(const IVRModel&) = delete;
 
+    std::string Name_;
+
     VkDeviceMemory VertexBufferMemory_;
     uint32_t VertexCount_;
     VkDeviceMemory IndexBufferMemory_;
@@ -78,7 +80,7 @@ private:
     VkBuffer IndexBuffer_;
 
 public:
-    IVRModel(std::shared_ptr<IVRDeviceManager> device_manager, std::string model_name);
+    IVRModel(std::shared_ptr<IVRDeviceManager> device_manager, std::string model_name, std::string model_path);
     ~IVRModel();
 
     std::vector<Vertex> Vertices;

@@ -5,6 +5,7 @@ layout(location = 0) out vec4 outColor;
 layout(location = 0) in vec3 frag_position;
 layout(location = 1) in vec3 frag_normal;
 layout(location = 2) in vec2 frag_tex_coord;
+layout(location = 3) in vec3 camera_world_pos;
 
 layout(binding=1) uniform LightUniformBufferObject {
     vec3 position;
@@ -24,8 +25,9 @@ layout(binding=2) uniform MaterialUniformBufferObject {
 layout(binding = 3) uniform sampler2D tex_sampler;
 
 void main() {
+    vec3 view_direction = camera_world_pos - frag_position;
 
-    vec3 halfway_vector = (-normalize(dir_light.direction) + -normalize(frag_position)) / (length(-normalize(dir_light.direction) + -normalize(frag_position)));
+    vec3 halfway_vector = (-normalize(dir_light.direction) + normalize(view_direction)) / (length(normalize(dir_light.direction) + -normalize(frag_position)));
 
     float diffuse_intensity = max(dot(normalize(frag_normal), -normalize(dir_light.direction)), 0.0);
     vec3 diffuse = diffuse_intensity * (material.diffuse_color * dir_light.diffuse_color);

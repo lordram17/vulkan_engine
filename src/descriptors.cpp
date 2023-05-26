@@ -24,7 +24,7 @@ void IVRDescriptorManager::CreateDescriptorSetLayouts()
 	}
 }
 
-VkDescriptorSetLayout IVRDescriptorManager::CreateDescriptorSetLayout(IVRDescriptorSetInfo descriptor_set_info)
+VkDescriptorSetLayout IVRDescriptorManager::CreateDescriptorSetLayout(IVRDescriptorSetInfo& descriptor_set_info)
 {
 	VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
 	descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

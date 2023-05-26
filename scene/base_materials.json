@@ -1,0 +1,16 @@
+[
+    {
+        "name": "blinn-phong",
+        "vertex_shader": "simple_texture_mapped.vert.spv",
+        "fragment_shader": "simple_texture_mapped.frag.spv",
+        "texture_count": 1,
+        "default_texture": "default_blinn-phong.png"
+    },
+    {
+        "name" : "cubemap",
+        "vertex_shader" : "cubemap.vert.spv",
+        "fragment_shader" : "cubemap.frag.spv",
+        "texture_count" : 6,
+        "default_texture" : "lutherstadt_wittenberg"
+    }
+]

@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 
 #include "model.h"
-#include "material.h"
+#include "material_instance.h"
 #include "camera.h"
 #include "ub_structs.h"
 #include "uniform_buffer_manager.h"
@@ -25,7 +25,7 @@ public:
 	IVRRenderObject(std::shared_ptr<IVRModel> model, std::shared_ptr<IVRMaterialInstance> material, std::shared_ptr<IVRCamera> camera, uint32_t swapchain_image_count);
 
 	std::shared_ptr<IVRModel> GetModel();
-	std::shared_ptr<IVRMaterialInstance> GetMaterial();
+	std::shared_ptr<IVRMaterialInstance> GetMaterialInstance();
 	std::shared_ptr<IVRUBManager> GetMVPMatrixUB(uint32_t swapchain_image_index);
 
 	void UpdateMVPMatrixUB(uint32_t swapchain_image_index);

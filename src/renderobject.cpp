@@ -10,7 +10,7 @@ std::shared_ptr<IVRModel> IVRRenderObject::GetModel()
     return Model_;
 }
 
-std::shared_ptr<IVRMaterialInstance> IVRRenderObject::GetMaterial()
+std::shared_ptr<IVRMaterialInstance> IVRRenderObject::GetMaterialInstance()
 {
     return Material_;
 }

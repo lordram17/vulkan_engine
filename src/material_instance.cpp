@@ -1,15 +1,11 @@
 #include "material_instance.h"
 
-IVRMaterialInstance::IVRMaterialInstance(std::shared_ptr<IVRDeviceManager> device_manager, 
-	std::string vertex_shader_name, std::string fragment_shader_name, 
+IVRMaterialInstance::IVRMaterialInstance(std::shared_ptr<IVRDeviceManager> device_manager, std::shared_ptr<IVRBaseMaterial> base_material,
 	std::vector<std::string> texture_names, MaterialPropertiesUBObj properties, uint32_t swapchain_image_count,
 	std::vector<std::vector<std::shared_ptr<IVRUBManager>>>& light_ubos) :
-	DeviceManager_(device_manager), 
+	DeviceManager_(device_manager), BaseMaterial_(base_material),
 	MaterialProperties_(properties), SwapchainImageCount_(swapchain_image_count), LightUBs_(light_ubos)
 {
-	VertexShaderPath_ = IVRPath::GetCrossPlatformPath({"shaders", vertex_shader_name });
-	FragmentShaderPath_ = IVRPath::GetCrossPlatformPath({ "shaders", fragment_shader_name });
-
 	for (std::string texture_name : texture_names)
 	{
 		std::shared_ptr<IVRTexture> texture_object;
@@ -20,7 +16,7 @@ IVRMaterialInstance::IVRMaterialInstance(std::shared_ptr<IVRDeviceManager> devic
 				IVR_LOG_ERROR("Loading more than one cubemap is not supported yet");
 			}
 
-			IVR_LOG_INFO("Loading cubemap: " + texture_name);
+			IVR_LOG_INFO("Loading cubemap texture: " + texture_name);
 
 			std::string texture_path = IVRPath::GetCrossPlatformPath({ "texture_files/cubemaps", texture_name });
 			texture_object = std::make_shared<IVRTextureCube>(DeviceManager_, texture_path);
@@ -40,119 +36,6 @@ IVRMaterialInstance::IVRMaterialInstance(std::shared_ptr<IVRDeviceManager> devic
 	LightCount_ = LightUBs_[0].size();
 	InitMVPMatrixUBs();
 	InitMaterialPropertiesUBs();
-	CreateDescriptorSetLayoutInfo();
-}
-
-void IVRMaterialInstance::CreateDescriptorSetLayoutInfo()
-{
-	//binding layout :
-	//0: MVP matrix
-	//1-5: Light 1-5
-	//6 : Material properties
-	// 7+ : textures
-
-	DescriptorSetInfo_ = {};
-	
-	uint32_t binding_count = 0;
-
-	//assign the mvp matrix uniform buffer always to the binding 0
-	VkDescriptorSetLayoutBinding mvp_matrix_binding{};
-	mvp_matrix_binding.binding = binding_count;
-	mvp_matrix_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	mvp_matrix_binding.descriptorCount = 1;
-	mvp_matrix_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	mvp_matrix_binding.pImmutableSamplers = nullptr; // Optional
-
-	DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(mvp_matrix_binding);
-	binding_count++;
-
-	//adding 5 light bindings
-	while (binding_count < LightCount_ + 1) {
-		//Light at binding 1
-		VkDescriptorSetLayoutBinding light_binding{};
-		light_binding.binding = binding_count;
-		light_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		light_binding.descriptorCount = 1;
-		light_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
-		light_binding.pImmutableSamplers = nullptr; // Optional
-
-		DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(light_binding);
-		binding_count++;
-	}
-	
-	//adding the material properties binding
-	VkDescriptorSetLayoutBinding material_properties_binding{}; 
-	material_properties_binding.binding = binding_count;
-	material_properties_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; 
-	material_properties_binding.descriptorCount = 1;
-	material_properties_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	material_properties_binding.pImmutableSamplers = nullptr; // Optional
-
-	DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(material_properties_binding);
-	binding_count++;
-
-	//assign the texture samplers to the next bindings
-	for (std::shared_ptr<IVRTexture> texture_object : Textures_)
-	{
-		VkDescriptorSetLayoutBinding texture_binding{};
-		texture_binding.binding = binding_count;
-		texture_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		texture_binding.descriptorCount = 1;
-		texture_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		texture_binding.pImmutableSamplers = nullptr; // Optional
-
-		DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(texture_binding);
-		binding_count++;
-	}
-
-	int a = 1;
-}
-
-IVRDescriptorSetInfo IVRMaterialInstance::GetDescriptorSetInfo()
-{
-	return DescriptorSetInfo_;
-}
-
-std::vector<VkDescriptorPoolSize> IVRMaterialInstance::GetDescriptorPoolSize()
-{
-	std::vector<VkDescriptorPoolSize> descriptor_pool_size;
-	
-	//the mvp matrix size is always 1
-	VkDescriptorPoolSize mvp_matrix_pool_size{};
-	mvp_matrix_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	mvp_matrix_pool_size.descriptorCount = 1;
-	
-	VkDescriptorPoolSize light_pool_size{};
-	light_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	light_pool_size.descriptorCount = 5;
-
-	VkDescriptorPoolSize material_properties_pool_size{};
-	material_properties_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	material_properties_pool_size.descriptorCount = 1;
-	
-	//the texture samplers may be more than one dependending on the number of textures
-	VkDescriptorPoolSize texture_pool_size{};
-	texture_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	texture_pool_size.descriptorCount = Textures_.size();
-	
-	for(uint32_t i = 0; i < SwapchainImageCount_; i++){
-		descriptor_pool_size.push_back(mvp_matrix_pool_size);
-		descriptor_pool_size.push_back(texture_pool_size);
-		descriptor_pool_size.push_back(material_properties_pool_size);
-		descriptor_pool_size.push_back(light_pool_size);
-	}
-
-	return descriptor_pool_size;
-}
-
-void IVRMaterialInstance::AssignDescriptorSetLayout(VkDescriptorSetLayout layout)
-{
-	DescriptorSetLayout_ = layout;
-}
-
-VkDescriptorSetLayout IVRMaterialInstance::GetDescriptorSetLayout()
-{
-	return DescriptorSetLayout_;
 }
 
 void IVRMaterialInstance::AssignDescriptorSet(VkDescriptorSet descriptor_set)
@@ -303,40 +186,7 @@ void IVRMaterialInstance::InitMaterialPropertiesUBs()
 	}
 }
 
-void IVRMaterialInstance::SetPipeline(VkPipeline pipeline)
+std::shared_ptr<IVRBaseMaterial> IVRMaterialInstance::GetBaseMaterial()
 {
-	Pipeline_ = pipeline;
-}
-
-VkPipeline IVRMaterialInstance::GetPipeline()
-{
-	return Pipeline_;
-}
-
-void IVRMaterialInstance::SetPipelineLayout(VkPipelineLayout pipeline_layout)
-{
-	PipelineLayout_ = pipeline_layout;
-}
-
-VkPipelineLayout IVRMaterialInstance::GetPipelineLayout()
-{
-	return PipelineLayout_;
-}
-
-std::string IVRMaterialInstance::GetVertexShaderPath()
-{
-	return VertexShaderPath_;
-}
-
-std::string IVRMaterialInstance::GetFragmentShaderPath()
-{
-	return FragmentShaderPath_;
-}
-
-void IVRMaterialInstance::UpdatePipelineConfigBasedOnMaterialProperties(IVRFixedFunctionPipelineConfig& ff_pipeline_config)
-{
-	if (MaterialProperties_.IsCubemap)
-	{
-		ff_pipeline_config.Rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
-	}
+	return BaseMaterial_;
 }

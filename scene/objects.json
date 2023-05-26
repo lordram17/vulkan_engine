@@ -1,24 +1,113 @@
 [
+
     {
-        "name" : "viking_room",
+        "name" : "plane",
         "type" : "3d_model",
-        "model_path" : "viking_room/viking_room.obj",
-        "material" : "viking_room_mat",
+        "model_path" : "simple_plane.obj",
         "transform" : {
             "position" : [0, 0, 0],
             "rotation" : [0, 0, 0],
-            "scale" : [1, 1, 1]
+            "scale" : [10, 10, 10]
+        },
+        "material" : "blinn-phong",
+        "material_properties" : {
+            "textures": [
+            ],
+            "specular_color": [0.2, 0.2, 0.2],
+            "diffuse_color":  [0.2, 0.2, 0.2],
+            "specular_power" : 1.0
         }
+    },
+    {
+        "name" : "sphere",
+        "type" : "3d_model",
+        "model_path" : "simple_sphere.obj",
+        "transform" : {
+            "position" : [0, 1, 0],
+            "rotation" : [0, 0, 0],
+            "scale" : [1, 1, 1]
+        },
+        "material" : "blinn-phong",
+        "material_properties" : {
+            "textures": [
+            ],
+            "specular_color": [0.0,0.0, 0.0],
+            "diffuse_color": [1.0, 0.0, 0.0],
+            "specular_power" : 1.0
+        }
+
+    },
+    {
+        "name" : "sphere",
+        "type" : "3d_model",
+        "model_path" : "simple_sphere.obj",
+        "transform" : {
+            "position" : [4, 1, 0],
+            "rotation" : [0, 0, 0],
+            "scale" : [1, 1, 1]
+        },
+        "material" : "blinn-phong",
+        "material_properties" : {
+            "textures": [
+            ],
+            "specular_color": [0.0, 1.0, 0.0],
+            "diffuse_color": [0.0, 0.0, 0.0],
+            "specular_power" : 5.0
+        }
+
+    },
+    {
+        "name" : "sphere",
+        "type" : "3d_model",
+        "model_path" : "simple_sphere.obj",
+        "transform" : {
+            "position" : [8, 1, 0],
+            "rotation" : [0, 0, 0],
+            "scale" : [1, 1, 1]
+        },
+        "material" : "blinn-phong",
+        "material_properties" : {
+            "textures": [
+            ],
+            "specular_color": [0.0, 1.0, 0.0],
+            "diffuse_color": [1.0, 0.0, 0.0],
+            "specular_power" : 5.0
+        }
+
+    },
+    {
+        "name" : "sphere",
+        "type" : "3d_model",
+        "model_path" : "simple_sphere.obj",
+        "transform" : {
+            "position" : [12, 1, 0],
+            "rotation" : [0, 0, 0],
+            "scale" : [1, 1, 1]
+        },
+        "material" : "blinn-phong",
+        "material_properties" : {
+            "textures": [
+            ],
+            "specular_color": [1.0, 1.0, 1.0],
+            "diffuse_color": [0.0, 0.0, 0.0],
+            "specular_power" : 1.0
+        }
+
     },
     {
         "name" : "skybox",
         "type" : "skybox",
         "model_path" : "simple_cube.obj",
-        "material" : "cubemap",
         "transform" : {
             "position" : [0, 0, 0],
             "rotation" : [0, 0, 0],
             "scale" : [1, 1, 1]
+        },
+        "material" : "cubemap",
+        "material_properties" : {
+            "textures": [
+                "lutherstadt_wittenberg"
+            ]
         }
     }
 ]
