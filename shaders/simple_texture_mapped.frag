@@ -27,7 +27,7 @@ layout(binding = 3) uniform sampler2D tex_sampler;
 void main() {
     vec3 view_direction = camera_world_pos - frag_position;
 
-    vec3 halfway_vector = normalize(-normalize(dir_light.direction) + normalize(view_direction)) ;
+    vec3 halfway_vector = normalize(-normalize(dir_light.direction) + normalize(frag_position));
 
     float diffuse_intensity = max(dot(normalize(frag_normal), -normalize(dir_light.direction)), 0.0);
     vec3 diffuse = diffuse_intensity * (material.diffuse_color * dir_light.diffuse_color);

@@ -11,6 +11,11 @@ public:
 	{
 		//convert filepath vector into a path using filesystem
 		std::filesystem::path filepath = std::filesystem::current_path();
+
+		#ifdef __linux__
+			filepath /= "..";
+		#endif
+
 		for (std::string path : path_vector)
 		{
 			filepath /= path;

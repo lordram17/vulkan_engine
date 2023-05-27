@@ -56,6 +56,7 @@ VkDescriptorSet IVRMaterialInstance::GetDescriptorSet(uint32_t swapchain_image_i
 
 void IVRMaterialInstance::WriteToDescriptorSet(uint32_t swapchain_image_index)
 {
+	
 	std::vector<VkWriteDescriptorSet> descriptor_writes;
 
 	//write the mvp matrix uniform buffer to the descriptor set
@@ -74,13 +75,15 @@ void IVRMaterialInstance::WriteToDescriptorSet(uint32_t swapchain_image_index)
 	mvp_matrix_write.pBufferInfo = &mvp_matrix_buffer_info;
 	
 	descriptor_writes.push_back(mvp_matrix_write);
-
+	
+	std::vector<VkDescriptorBufferInfo> light_buffer_infos;
 	//wrie the light uniform buffer to the descriptor set
 	for (uint32_t i = 0; i < LightCount_; i++) {
 		VkDescriptorBufferInfo light_buffer_info{};
 		light_buffer_info.buffer = LightUBs_[swapchain_image_index][i]->GetBuffer();
 		light_buffer_info.offset = 0;
 		light_buffer_info.range = LightUBs_[swapchain_image_index][i]->GetBufferSize();
+		light_buffer_infos.push_back(light_buffer_info);
 		
 		VkWriteDescriptorSet light_write{};
 		light_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -89,7 +92,7 @@ void IVRMaterialInstance::WriteToDescriptorSet(uint32_t swapchain_image_index)
 		light_write.dstArrayElement = 0;
 		light_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		light_write.descriptorCount = 1;
-		light_write.pBufferInfo = &light_buffer_info;
+		light_write.pBufferInfo = &light_buffer_infos[i];
 		
 		descriptor_writes.push_back(light_write);
 	}

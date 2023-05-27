@@ -41,7 +41,7 @@ void IVRLightManager::TransformLightsByViewMatrix(glm::mat4 view, uint32_t swapc
 		switch (light.Type)
 		{
 		case IVRLightType::Directional:
-			//light_ubo.Direction = glm::vec3(view * glm::vec4(light.Direction, 0.0f));
+			light_ubo.Direction = glm::vec3(view * glm::vec4(light.Direction, 0.0f));
 			break;
 
 		case IVRLightType::Point:

@@ -3,6 +3,8 @@
 #include <iostream>
 #include <vector>
 #include <stdexcept>
+#include <memory>
+#include <cstring>
 
 
 #include "buffer_utils.h"

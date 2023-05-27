@@ -7,9 +7,12 @@ set(CMAKE_CXX_STANDARD 17)
 file(GLOB_RECURSE SRC_FILES src/*.cpp)
 add_executable(ivr ${SRC_FILES})
 
+
+
 #adding the include directory for the headers. PBULIC is the scope, not sure what it does
 target_include_directories(ivr PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_include_directories(ivr PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external_libs)
+target_include_directories(ivr PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external)
+target_include_directories(ivr PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/external/spdlog/include)
 
 target_link_libraries(ivr -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi)
 

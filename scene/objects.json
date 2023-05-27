@@ -50,9 +50,9 @@
         "material_properties" : {
             "textures": [
             ],
-            "specular_color": [0.0, 1.0, 0.0],
-            "diffuse_color": [0.0, 0.0, 0.0],
-            "specular_power" : 10.0
+            "specular_color": [1.0, 1.0, 1.0],
+            "diffuse_color": [0.7, 0.7, 0.7],
+            "specular_power" : 200.0
         }
 
     },

@@ -7,12 +7,12 @@ IVRTextureCube::IVRTextureCube(std::shared_ptr<IVRDeviceManager> device_manager,
 	IVRTexture(device_manager)
 {
 	//the order of these paths is important
-	CubemapPaths_.push_back(cubemap_folder_path + "\\px.png");
-	CubemapPaths_.push_back(cubemap_folder_path + "\\nx.png");
-	CubemapPaths_.push_back(cubemap_folder_path + "\\py.png");
-	CubemapPaths_.push_back(cubemap_folder_path + "\\ny.png");
-	CubemapPaths_.push_back(cubemap_folder_path + "\\pz.png");
-	CubemapPaths_.push_back(cubemap_folder_path + "\\nz.png");
+	CubemapPaths_.push_back(cubemap_folder_path + "/px.png");
+	CubemapPaths_.push_back(cubemap_folder_path + "/nx.png");
+	CubemapPaths_.push_back(cubemap_folder_path + "/py.png");
+	CubemapPaths_.push_back(cubemap_folder_path + "/ny.png");
+	CubemapPaths_.push_back(cubemap_folder_path + "/pz.png");
+	CubemapPaths_.push_back(cubemap_folder_path + "/nz.png");
 
 	ImageViewType_ = VK_IMAGE_VIEW_TYPE_CUBE;
 	SamplerAddressMode_ = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
