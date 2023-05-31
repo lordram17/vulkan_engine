@@ -18,17 +18,18 @@ private:
     VkExtent2D DepthImageExtent_;
     std::shared_ptr<IVRDeviceManager> DeviceManager_;
 
+    VkFormat FindSupportedFormat_(const std::vector<VkFormat>& candidates,
+        VkImageTiling tiling, VkFormatFeatureFlags features);
+
 public:
 
     IVRDepthImage(std::shared_ptr<IVRDeviceManager> device_manager, VkExtent2D depth_image_extent);
 
     void CreateDepthResources();
-
-    VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, 
-        VkImageTiling tiling, VkFormatFeatureFlags features);
-    
+        
     VkFormat FindDepthFormat();
-
     VkImageView GetDepthImageView();
+
+    void TransitionDepthImageToShaderRead();
 
 };

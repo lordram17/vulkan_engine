@@ -13,6 +13,7 @@
 #include "framebuffer_manager.h"
 #include "sync_objects_manager.h"
 #include "command_buffer_manager.h"
+#include "shadow_map.h"
 
 
 class IVREngine {
@@ -29,6 +30,7 @@ private:
 	std::shared_ptr<IVRFramebufferManager> FramebufferManager_;
 	std::shared_ptr<IVRSyncObjectsManager> SyncObjectsManager_;
 	std::shared_ptr<IVRCBManager> CBManager_;
+	std::shared_ptr<IVRShadowMap> ShadowMap_;
 
 	uint32_t CurrentSwapchainImageIndex_;
 

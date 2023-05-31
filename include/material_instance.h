@@ -6,6 +6,7 @@
 #include "texture.h"
 #include "texture_2d.h"
 #include "texture_cube.h"
+#include "texture_depth.h"
 #include "uniform_buffer_manager.h"
 #include "descriptors.h"
 #include "ivr_path.h"
@@ -21,6 +22,7 @@ private:
 
 	std::vector<std::string> TextureNames_;
 	std::vector<std::shared_ptr<IVRTexture>> Textures_;
+	std::vector<std::shared_ptr<IVRTextureDepth>> DepthTextures_;
 
 	std::vector<VkDescriptorSet> DescriptorSets_;
 
@@ -36,14 +38,16 @@ private:
 	//even though light will generally remain constant, it can be changed every frame (for example, if the light is attached to a moving object)
 	std::vector<std::vector<std::shared_ptr<IVRUBManager>>> LightUBs_; 
 	uint32_t LightCount_;
-
 	std::vector<std::shared_ptr<IVRUBManager>> MaterialPropertiesUBs_;
+	std::vector<std::shared_ptr<IVRUBManager>> LightMVPUBManagers_;
 
 public:
 	IVRMaterialInstance(std::shared_ptr<IVRDeviceManager> device_manager, std::shared_ptr<IVRBaseMaterial> base_material,
 				std::vector<std::string> texture_names, MaterialPropertiesUBObj properties, uint32_t swapchain_image_count, 
 				std::vector<std::vector<std::shared_ptr<IVRUBManager>>>& light_ubos);
 	
+	void AssignDepthTextures(std::vector<std::shared_ptr<IVRTextureDepth>> depth_textures);
+
 	void AssignDescriptorSet(VkDescriptorSet descriptor_set);
 	VkDescriptorSet GetDescriptorSet(uint32_t swapchain_image_index);
 
@@ -55,6 +59,8 @@ public:
 	std::shared_ptr<IVRUBManager> GetMVPMatrixUB(uint32_t swapchain_image_index);
 	void SetLightsUBs(std::vector<std::shared_ptr<IVRUBManager>> light_ubs);
 	void InitMaterialPropertiesUBs();
+
+	void AssignLightMVPUniformBuffers(std::shared_ptr<IVRUBManager> light_mvp_ubos);
 
 	std::shared_ptr<IVRBaseMaterial> GetBaseMaterial();
 };

@@ -11,6 +11,7 @@ void IVRWorld::Init()
 	IVR_LOG_INFO("Initializing world...");
 	
 	DescriptorManager_ = std::make_shared<IVRDescriptorManager>(DeviceManager_);
+	SMDescriptorManager_ = std::make_shared<IVRDescriptorManager>(DeviceManager_);
 	LightManager_ = std::make_shared<IVRLightManager>(DeviceManager_, SwapchainImageCount_);
 
 	SetupCamera();
@@ -25,7 +26,22 @@ void IVRWorld::Init()
 	CreateDescriptorSetLayoutsForBaseMaterials();
 	CountPoolSizes();
 	CreateDescriptorSets();
-	WriteDescriptorSets();
+
+	//shadow mapper in the engine is instantiated post world init so the shader map materials can only be created after the world init
+}
+
+void IVRWorld::PostShadowMapperInit()
+{
+	AssignDescriptorSetLayoutToShadowMapMaterials();
+	CreateShadowMapMaterialDescriptorSets();
+	WriteShadowMapMaterialDescriptorSets();
+
+	//sharing light mvp uniform buffer from shadow map materials to base materials
+	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
+	{
+		render_object->AssignLightMVPUBToMaterialInstance();
+	}
+	WriteDescriptorSets(); //the material descriptor sets (which also include the depth texture from the shadow map)
 }
 
 //runs every frame
@@ -36,9 +52,16 @@ void IVRWorld::Update(float dt, uint32_t swapchain_index)
 	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
 	{
 		render_object->UpdateMVPMatrixUB(swapchain_index);
+		render_object->UpdateLightMVPUB(swapchain_index, LightManager_->GetLight(0).GetLightView(), 
+			LightManager_->GetLight(0).GetLightProjection(Camera_->FieldOfView, Camera_->AspectRatio, Camera_->NearPlane, Camera_->FarPlane));
 	}
 }
 
+
+std::shared_ptr<IVRLightManager> IVRWorld::GetLightManager()
+{
+	return LightManager_;
+}
 
 std::vector<std::shared_ptr<IVRRenderObject>>& IVRWorld::GetRenderObjects()
 {
@@ -143,6 +166,85 @@ void IVRWorld::WriteDescriptorSets()
 		{
 			render_object->GetMaterialInstance()->WriteToDescriptorSet(i);
 		}
+	}
+}
+
+void IVRWorld::InitShadowMapMaterials(IVRDescriptorSetInfo descriptor_set_info)
+{
+	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
+	{
+		std::shared_ptr<IVRShadowmapMaterial> sm_mat = std::make_shared<IVRShadowmapMaterial>(DeviceManager_, descriptor_set_info, SwapchainImageCount_);
+		render_object->AssignShadowmapMaterial(sm_mat);
+	}
+}
+
+void IVRWorld::AssignDescriptorSetLayoutToShadowMapMaterials()
+{
+	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
+	{
+		std::shared_ptr<IVRShadowmapMaterial> sm_mat = render_object->GetShadowmapMaterial();
+		sm_mat->AssignDescriptorSetLayout(DescriptorManager_->CreateDescriptorSetLayout(sm_mat->GetDescriptorSetInfo()));
+	}
+}
+
+std::vector<VkDescriptorPoolSize> IVRWorld::CountShadowMapMaterialPoolSize()
+{
+	std::vector<VkDescriptorPoolSize> pool_sizes;
+
+	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
+	{
+		std::shared_ptr<IVRShadowmapMaterial> sm_mat = render_object->GetShadowmapMaterial();
+		
+		for (VkDescriptorPoolSize pool_size : sm_mat->GetDescriptorPoolSize())
+		{
+			pool_sizes.push_back(pool_size);
+		}
+	}
+	return pool_sizes;
+}
+
+void IVRWorld::CreateShadowMapMaterialDescriptorSets()
+{
+	std::vector<VkDescriptorPoolSize> pool_sizes = CountShadowMapMaterialPoolSize();
+	
+	SMDescriptorManager_->CreateDescriptorPool(pool_sizes, RenderObjects_.size() * SwapchainImageCount_);
+	
+	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
+	{
+		std::shared_ptr<IVRShadowmapMaterial> sm_mat = render_object->GetShadowmapMaterial();
+		
+		for (uint32_t i = 0; i < SwapchainImageCount_; i++)
+		{
+			VkDescriptorSet descriptor_set = SMDescriptorManager_->CreateDescriptorSet(sm_mat->GetDescriptorSetLayout());
+			sm_mat->AssignDescriptorSet(descriptor_set);
+		}
+	}
+}
+
+void IVRWorld::WriteShadowMapMaterialDescriptorSets()
+{
+	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
+	{
+		std::shared_ptr<IVRShadowmapMaterial> sm_mat = render_object->GetShadowmapMaterial();
+		for (uint32_t i = 0; i < SwapchainImageCount_; i++)
+		{
+			sm_mat->WriteToDescriptorSet(i);
+		}
+	}
+}
+
+void IVRWorld::AssignShadowMapDepthTextures(std::vector<std::shared_ptr<IVRDepthImage>> depth_images)
+{
+	std::vector<std::shared_ptr<IVRTextureDepth>> depth_textures;
+
+	for (uint32_t i = 0; i < SwapchainImageCount_; i++)
+	{
+		depth_textures.push_back(std::make_shared<IVRTextureDepth>(DeviceManager_, depth_images[i]));
+	}
+
+	for (std::shared_ptr<IVRRenderObject> render_object : RenderObjects_)
+	{
+		render_object->GetMaterialInstance()->AssignDepthTextures(depth_textures);
 	}
 }
 

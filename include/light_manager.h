@@ -31,4 +31,6 @@ public:
 	std::shared_ptr<IVRUBManager> GetLightUBManagerByIndex(uint32_t light_index, uint32_t swapchain_index);
 	std::vector<std::vector<std::shared_ptr<IVRUBManager>>>& GetAllLightUBs();
 
+	IVRLight& GetLight(uint32_t index);
+
 };

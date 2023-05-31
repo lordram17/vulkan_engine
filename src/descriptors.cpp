@@ -5,25 +5,6 @@ IVRDescriptorManager::IVRDescriptorManager(std::shared_ptr<IVRDeviceManager> dev
 {
 }
 
-void IVRDescriptorManager::CreateDescriptorSetLayouts()
-{
-//create a descriptor set layout for every IVRDescriptorSetInfo
-	for (IVRDescriptorSetInfo& descriptor_set_info : DescriptorSetInfos_) {
-		
-		VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
-		descriptor_set_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		descriptor_set_layout_create_info.bindingCount = static_cast<uint32_t>(descriptor_set_info.DescriptorSetLayoutBindings.size());
-		descriptor_set_layout_create_info.pBindings = descriptor_set_info.DescriptorSetLayoutBindings.data();
-		
-		VkDescriptorSetLayout descriptor_set_layout;
-		if (vkCreateDescriptorSetLayout(DeviceManager_->GetLogicalDevice(), &descriptor_set_layout_create_info, nullptr, &descriptor_set_layout) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create descriptor set layout!");
-		}
-		
-		DescriptorSetLayouts_.push_back(descriptor_set_layout);
-	}
-}
-
 VkDescriptorSetLayout IVRDescriptorManager::CreateDescriptorSetLayout(IVRDescriptorSetInfo& descriptor_set_info)
 {
 	VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
@@ -68,16 +49,4 @@ VkDescriptorSet IVRDescriptorManager::CreateDescriptorSet(VkDescriptorSetLayout 
 
 	return descriptor_set;
 }
-
-VkDescriptorSet IVRDescriptorManager::GetDescriptorSet(uint32_t descriptor_set_id)
-{
-	return DescriptorSets_[descriptor_set_id];
-}
-
-void IVRDescriptorManager::UpdateDescriptorSet(VkWriteDescriptorSet write_descriptor_set)
-{
-	vkUpdateDescriptorSets(DeviceManager_->GetLogicalDevice(), 1, &write_descriptor_set, 0, nullptr);
-}
-
-
 

@@ -4,7 +4,6 @@
 
 glm::mat4 IVRCamera::GetViewMatrix()
 {
-
     //construct the view matrix
     glm::mat4 view = glm::mat4(1.0f); 
     view = glm::lookAt(CameraPosition_, CameraPosition_ + CameraDirection_, CameraUp_);

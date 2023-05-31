@@ -42,7 +42,7 @@
         "type" : "3d_model",
         "model_path" : "simple_sphere.obj",
         "transform" : {
-            "position" : [4, 1, 0],
+            "position" : [2, 2, 2],
             "rotation" : [0, 0, 0],
             "scale" : [1, 1, 1]
         },

@@ -38,6 +38,11 @@ IVRMaterialInstance::IVRMaterialInstance(std::shared_ptr<IVRDeviceManager> devic
 	InitMaterialPropertiesUBs();
 }
 
+void IVRMaterialInstance::AssignDepthTextures(std::vector<std::shared_ptr<IVRTextureDepth>> depth_textures)
+{
+	DepthTextures_ = depth_textures;
+}
+
 void IVRMaterialInstance::AssignDescriptorSet(VkDescriptorSet descriptor_set)
 {
 	DescriptorSets_.push_back(descriptor_set);
@@ -56,7 +61,6 @@ VkDescriptorSet IVRMaterialInstance::GetDescriptorSet(uint32_t swapchain_image_i
 
 void IVRMaterialInstance::WriteToDescriptorSet(uint32_t swapchain_image_index)
 {
-	
 	std::vector<VkWriteDescriptorSet> descriptor_writes;
 
 	//write the mvp matrix uniform buffer to the descriptor set
@@ -88,13 +92,57 @@ void IVRMaterialInstance::WriteToDescriptorSet(uint32_t swapchain_image_index)
 		VkWriteDescriptorSet light_write{};
 		light_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		light_write.dstSet = DescriptorSets_[swapchain_image_index];
-		light_write.dstBinding = i + 1;
+		light_write.dstBinding = 1 + i;
 		light_write.dstArrayElement = 0;
 		light_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		light_write.descriptorCount = 1;
 		light_write.pBufferInfo = &light_buffer_infos[i];
 		
 		descriptor_writes.push_back(light_write);
+	}
+
+	std::vector<VkDescriptorBufferInfo> light_mvp_buffer_infos;
+	//write the light mvp matrix uniform buffer to the descriptor set
+	for (uint32_t i = 0; i < LightCount_; i++) {
+		
+		VkDescriptorBufferInfo light_mvp_buffer_info{};
+		light_mvp_buffer_info.buffer = LightMVPUBManagers_[swapchain_image_index]->GetBuffer();
+		light_mvp_buffer_info.offset = 0;
+		light_mvp_buffer_info.range = LightMVPUBManagers_[swapchain_image_index]->GetBufferSize();
+		light_mvp_buffer_infos.push_back(light_mvp_buffer_info);
+
+		VkWriteDescriptorSet light_mvp_write{};
+		light_mvp_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		light_mvp_write.dstSet = DescriptorSets_[swapchain_image_index];
+		light_mvp_write.dstBinding = 1 + LightCount_ + i;
+		light_mvp_write.dstArrayElement = 0;
+		light_mvp_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		light_mvp_write.descriptorCount = 1;
+		light_mvp_write.pBufferInfo = &light_mvp_buffer_infos[i];
+
+		descriptor_writes.push_back(light_mvp_write);
+	}
+
+
+	std::vector<VkDescriptorImageInfo> depth_texture_image_infos;
+	for (uint32_t i = 0; i < LightCount_; i++)
+	{
+		VkDescriptorImageInfo image_info{};
+		image_info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		image_info.imageView = DepthTextures_[swapchain_image_index]->GetTextureImageView();
+		image_info.sampler = DepthTextures_[swapchain_image_index]->GetTextureSampler();
+		depth_texture_image_infos.push_back(image_info);
+
+		VkWriteDescriptorSet depth_texture_write{};
+		depth_texture_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		depth_texture_write.dstSet = DescriptorSets_[swapchain_image_index];
+		depth_texture_write.dstBinding = 2 * LightCount_ + 1 + i;
+		depth_texture_write.dstArrayElement = 0;
+		depth_texture_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		depth_texture_write.descriptorCount = 1;
+		depth_texture_write.pImageInfo = &depth_texture_image_infos[i];
+
+		descriptor_writes.push_back(depth_texture_write);
 	}
 
 	//write the material properties uniform buffer to the descriptor set
@@ -106,7 +154,7 @@ void IVRMaterialInstance::WriteToDescriptorSet(uint32_t swapchain_image_index)
 	VkWriteDescriptorSet material_properties_write{};
 	material_properties_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	material_properties_write.dstSet = DescriptorSets_[swapchain_image_index];
-	material_properties_write.dstBinding = LightCount_ + 1;
+	material_properties_write.dstBinding = 3 * LightCount_ + 1;
 	material_properties_write.dstArrayElement = 0;
 	material_properties_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	material_properties_write.descriptorCount = 1;
@@ -125,7 +173,7 @@ void IVRMaterialInstance::WriteToDescriptorSet(uint32_t swapchain_image_index)
 		VkWriteDescriptorSet texture_write{};
 		texture_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		texture_write.dstSet = DescriptorSets_[swapchain_image_index];
-		texture_write.dstBinding = LightCount_ + 2 + i;
+		texture_write.dstBinding = 3 * LightCount_ + 2 + i;
 		texture_write.dstArrayElement = 0;
 		texture_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		texture_write.descriptorCount = 1;
@@ -187,6 +235,11 @@ void IVRMaterialInstance::InitMaterialPropertiesUBs()
 
 		MaterialPropertiesUBs_.push_back(material_properties_ub);
 	}
+}
+
+void IVRMaterialInstance::AssignLightMVPUniformBuffers(std::shared_ptr<IVRUBManager> light_mvp_ubos)
+{
+	LightMVPUBManagers_.push_back(light_mvp_ubos);
 }
 
 std::shared_ptr<IVRBaseMaterial> IVRMaterialInstance::GetBaseMaterial()

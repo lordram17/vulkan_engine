@@ -134,19 +134,8 @@ std::vector<IVRLight>&& IVRWorldLoader::LoadLightsFromJson()
 
 		IVRLight light = {};
 
-		if (light_data["type"] == "directional")
-		{
-			light.Direction = glm::vec3(light_data["direction"][0], light_data["direction"][1], light_data["direction"][2]);
-		}
-		else if (light_data["type"] == "point")
-		{
-			light.Position = glm::vec3(light_data["position"][0], light_data["position"][1], light_data["position"][2]);
-		}
-		else if (light_data["type"] == "spot")
-		{
-			light.Direction = glm::vec3(light_data["direction"][0], light_data["direction"][1], light_data["direction"][2]);
-			light.Position = glm::vec3(light_data["position"][0], light_data["position"][1], light_data["position"][2]);
-		}
+		light.Direction = glm::vec3(light_data["direction"][0], light_data["direction"][1], light_data["direction"][2]);
+		light.Position = glm::vec3(light_data["position"][0], light_data["position"][1], light_data["position"][2]);
 
 		light.AmbientColor = glm::vec3(light_data["ambient_color"][0], light_data["ambient_color"][1], light_data["ambient_color"][2]);
 		light.DiffuseColor = glm::vec3(light_data["diffuse_color"][0], light_data["diffuse_color"][1], light_data["diffuse_color"][2]);

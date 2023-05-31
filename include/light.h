@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 enum class IVRLightType {
 	Directional,
@@ -16,6 +17,9 @@ struct IVRLight {
 	glm::vec3 DiffuseColor;
 	glm::vec3 SpecularColor;
 	IVRLightType Type;
+
+	glm::mat4 GetLightView();
+	glm::mat4 GetLightProjection(float fov, float aspect_ratio, float near_plane, float far_plane);
 };
 
 //the light struct that is passed to the shader (position/direction are transformed by the view matrix)

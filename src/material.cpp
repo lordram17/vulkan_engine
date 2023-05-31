@@ -35,7 +35,7 @@ void IVRBaseMaterial::CreateDescriptorSetLayoutInfo()
 	DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(mvp_matrix_binding);
 	binding_count++;
 
-	//adding 5 light bindings
+	//adding light bindings
 	while (binding_count < LightCount_ + 1) {
 		//Light at binding 1
 		VkDescriptorSetLayoutBinding light_binding{};
@@ -46,6 +46,32 @@ void IVRBaseMaterial::CreateDescriptorSetLayoutInfo()
 		light_binding.pImmutableSamplers = nullptr; // Optional
 
 		DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(light_binding);
+		binding_count++;
+	}
+
+	while (binding_count < 2 * LightCount_ + 1)
+	{
+		VkDescriptorSetLayoutBinding light_mvp_binding{};
+		light_mvp_binding.binding = binding_count;
+		light_mvp_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		light_mvp_binding.descriptorCount = 1;
+		light_mvp_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		light_mvp_binding.pImmutableSamplers = nullptr; // Optional
+
+		DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(light_mvp_binding);
+		binding_count++;
+	}
+
+	//adding depth textures
+	while (binding_count < 3 * LightCount_ + 1 )
+	{
+		VkDescriptorSetLayoutBinding depth_texture_binding{};
+		depth_texture_binding.binding = binding_count;
+		depth_texture_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		depth_texture_binding.descriptorCount = 1;
+		depth_texture_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		depth_texture_binding.pImmutableSamplers = nullptr; // Optional
+		DescriptorSetInfo_.DescriptorSetLayoutBindings.push_back(depth_texture_binding);
 		binding_count++;
 	}
 
@@ -103,6 +129,14 @@ std::vector<VkDescriptorPoolSize> IVRBaseMaterial::GetDescriptorPoolSize()
 	light_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	light_pool_size.descriptorCount = LightCount_;
 
+	VkDescriptorPoolSize light_mvp_pool_size{};
+	light_mvp_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	light_mvp_pool_size.descriptorCount = LightCount_;
+
+	VkDescriptorPoolSize depth_texture_pool_size{};
+	depth_texture_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	depth_texture_pool_size.descriptorCount = LightCount_;
+
 	VkDescriptorPoolSize material_properties_pool_size{};
 	material_properties_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	material_properties_pool_size.descriptorCount = 1;
@@ -117,6 +151,8 @@ std::vector<VkDescriptorPoolSize> IVRBaseMaterial::GetDescriptorPoolSize()
 		descriptor_pool_size.push_back(texture_pool_size);
 		descriptor_pool_size.push_back(material_properties_pool_size);
 		descriptor_pool_size.push_back(light_pool_size);
+		descriptor_pool_size.push_back(light_mvp_pool_size);
+		descriptor_pool_size.push_back(depth_texture_pool_size);
 	}
 
 	return descriptor_pool_size;

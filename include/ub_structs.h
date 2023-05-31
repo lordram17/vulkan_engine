@@ -11,6 +11,12 @@ struct MVPUBObj {
     glm::mat4 Proj;
 };
 
+struct ShadowMapLightMVPUBObj {
+	glm::mat4 Model;
+	glm::mat4 LightView;
+	glm::mat4 LightProjection;
+};
+
 struct MaterialPropertiesUBObj {
 	float SpecularPower = 0;
 	uint32_t IsCubemap = 0;

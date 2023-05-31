@@ -11,6 +11,8 @@
 #include "world_loader.h"
 #include "debug_logger_utils.h"
 #include "material_instance.h"
+#include "shadow_map.h"
+#include "shadowmap_material.h"
 
 //there should be only one world. Render objects can be grouped together into a scene (for now doing it directly)
 class IVRWorld {
@@ -18,6 +20,9 @@ class IVRWorld {
 private:
 	std::shared_ptr <IVRDescriptorManager> DescriptorManager_; //this class creates it own descriptor manager
 	std::shared_ptr<IVRDeviceManager> DeviceManager_;
+
+	std::shared_ptr<IVRShadowMap> ShadowMapper_;
+	std::shared_ptr<IVRDescriptorManager> SMDescriptorManager_;
 
 	std::vector<std::shared_ptr<IVRRenderObject>> RenderObjects_;
 	std::vector<std::shared_ptr<IVRBaseMaterial>> BaseMaterials_;
@@ -42,9 +47,19 @@ public:
 	void CreateDescriptorSets();
 	void WriteDescriptorSets();
 
+	void InitShadowMapMaterials(IVRDescriptorSetInfo descriptor_set_info);
+	void AssignDescriptorSetLayoutToShadowMapMaterials();
+	std::vector<VkDescriptorPoolSize> CountShadowMapMaterialPoolSize();
+	void CreateShadowMapMaterialDescriptorSets();
+	void WriteShadowMapMaterialDescriptorSets();
+
+	void AssignShadowMapDepthTextures(std::vector<std::shared_ptr<IVRDepthImage>>);
+
 	void Init();
+	void PostShadowMapperInit();
 	void Update(float dt, uint32_t swapchain_index);
 
+	std::shared_ptr<IVRLightManager> GetLightManager();
 	std::vector<std::shared_ptr<IVRRenderObject>>& GetRenderObjects();
 	std::vector<std::shared_ptr<IVRBaseMaterial>>& GetBaseMaterials();
 	void OrganizeRenderObjectsByBaseMaterial();

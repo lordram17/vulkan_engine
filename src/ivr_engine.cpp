@@ -47,13 +47,19 @@ void IVREngine::InitEngine()
 	IVR_LOG_INFO("Creating the Framebuffers");
 	FramebufferManager_ = std::make_shared<IVRFramebufferManager>(DeviceManager_, Renderpass_->GetRenderpass(), SwapchainManager_, DepthImage_);
 	SyncObjectsManager_ = std::make_shared<IVRSyncObjectsManager>(DeviceManager_);
-	
+
 	IVR_LOG_INFO("Creating the Command Buffer");
 	CBManager_ = std::make_shared<IVRCBManager>(DeviceManager_);
 }
 
 void IVREngine::PostWorldInit()
 {
+	IVR_LOG_INFO("Creating the shadow mapper");
+	ShadowMap_ = std::make_shared<IVRShadowMap>(DeviceManager_, World_->GetLightManager(), SwapchainManager_->GetSwapchainExtent(), SwapchainManager_->GetImageViewCount());
+	World_->InitShadowMapMaterials(ShadowMap_->GetDescriptorSetInfo());
+	World_->AssignShadowMapDepthTextures(ShadowMap_->GetDepthImages());
+	World_->PostShadowMapperInit();
+
 	World_->SetCameraAspectRatio(SwapchainManager_->GetSwapchainExtent().width / (float)SwapchainManager_->GetSwapchainExtent().height);
 	PipelineCreator_ = std::make_shared<IVRPipelineCreator>(DeviceManager_);
 	IVR_LOG_INFO("Creating Pipelines...");
@@ -115,7 +121,6 @@ void IVREngine::DrawFrame()
 	vkResetCommandBuffer(CBManager_->GetCommandBuffer(), 0);
 	
 	CBManager_->StartCommandBuffer();
-	Renderpass_->BeginRenderPass(CBManager_->GetCommandBuffer(), FramebufferManager_->GetFramebuffer(CurrentSwapchainImageIndex_), SwapchainManager_->GetSwapchainExtent());
 
 	VkViewport viewport{};
 	viewport.x = 0.0f;
@@ -131,6 +136,25 @@ void IVREngine::DrawFrame()
 	scissor.extent = SwapchainManager_->GetSwapchainExtent();
 	vkCmdSetScissor(CBManager_->GetCommandBuffer(), 0, 1, &scissor);
 
+	//shadow map rendering
+	ShadowMap_->BeginRenderPass(CBManager_->GetCommandBuffer(), CurrentSwapchainImageIndex_);
+	vkCmdBindPipeline(CBManager_->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, ShadowMap_->GetPipeline());
+
+	for (std::shared_ptr<IVRRenderObject> render_object : World_->GetRenderObjects())
+	{
+		VkDescriptorSet sm_descriptor_set[] = { render_object->GetShadowmapMaterial()->GetDescriptorSet(CurrentSwapchainImageIndex_)};
+		vkCmdBindDescriptorSets(CBManager_->GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, ShadowMap_->GetPipelineLayout(), 0, 1, sm_descriptor_set, 0, nullptr);
+
+		VkBuffer vertex_buffers[] = { render_object->GetModel()->GetVertexBuffer() };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(CBManager_->GetCommandBuffer(), 0, 1, vertex_buffers, offsets);
+		vkCmdBindIndexBuffer(CBManager_->GetCommandBuffer(), render_object->GetModel()->GetIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdDrawIndexed(CBManager_->GetCommandBuffer(), render_object->GetModel()->Indices.size(), 1, 0, 0, 0);
+	}
+	ShadowMap_->EndRenderPass(CBManager_->GetCommandBuffer());
+
+	Renderpass_->BeginRenderPass(CBManager_->GetCommandBuffer(), FramebufferManager_->GetFramebuffer(CurrentSwapchainImageIndex_), SwapchainManager_->GetSwapchainExtent());
 
 	for (std::unordered_map<std::shared_ptr<IVRBaseMaterial>, std::vector<std::shared_ptr<IVRRenderObject>>>::iterator iter = World_->GetBaseMaterialRenderObjectMap().begin();
 		iter != World_->GetBaseMaterialRenderObjectMap().end(); ++iter)
@@ -154,7 +178,6 @@ void IVREngine::DrawFrame()
 			vkCmdDrawIndexed(CBManager_->GetCommandBuffer(), render_object->GetModel()->Indices.size(), 1, 0, 0, 0);
 		}
 	}
-
 
 	Renderpass_->EndRenderPass(CBManager_->GetCommandBuffer());
 	CBManager_->EndCommandBuffer();
